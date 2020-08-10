@@ -85,7 +85,7 @@ unsigned long long round_to_power_of_two(unsigned long long num)
         ret <<= 1;
     }
     return ret;
-};
+}
 
 template <typename Real>
 inline bool nonoverlapping(Real a, Real b)

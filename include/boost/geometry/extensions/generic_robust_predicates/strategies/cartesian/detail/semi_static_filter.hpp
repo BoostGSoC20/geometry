@@ -54,6 +54,8 @@ private:
         >;
     using ct = CalculationType;
 public:
+    using computations = boost::mp11::mp_list<Expression, ErrorExpression>;
+
     template <typename ...Reals>
     static inline int apply(const Reals&... args)
     {

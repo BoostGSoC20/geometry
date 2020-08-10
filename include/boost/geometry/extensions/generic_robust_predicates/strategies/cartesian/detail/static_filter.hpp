@@ -45,6 +45,8 @@ private:
         >;
     ct m_error_bound;
 public:
+    using computations = boost::mp11::mp_list<Expression>;
+
     inline static_filter() {}
 
     ct error_bound() const { return m_error_bound; }
@@ -58,6 +60,8 @@ public:
         static_assert(sizeof...(Reals) == max_argn<ErrorExpression>::value,
                       "Number of constructor arguments is incompatible with error expression.");
     }
+
+    inline static_filter(const ct& b) : m_error_bound(b) {}
 
     template <typename ...Reals>
     inline int apply(const Reals&... args) const
