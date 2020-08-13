@@ -66,10 +66,13 @@ public:
     template <typename ...Reals>
     inline int apply(const Reals&... args) const
     {
+        using arg_list_input = argument_list<sizeof...(Reals)>;
+        using arg_list = boost::mp11::mp_list<arg_list_input>;
         std::array<ct, sizeof...(Reals)> input {static_cast<ct>(args)...};
         std::array<ct, boost::mp11::mp_size<evals>::value> results;
-        approximate_interim<evals, evals, ct>(results, input);
-        const ct det = get_approx<evals, Expression, ct>(results, input);
+        approximate_interim<evals, evals, arg_list, ct>(results, input);
+        using allm = boost::mp11::mp_push_front<arg_list, evals>;
+        const ct det = get_approx<Expression, allm, ct>(results, input);
         if (det > m_error_bound)
         {
             return 1;

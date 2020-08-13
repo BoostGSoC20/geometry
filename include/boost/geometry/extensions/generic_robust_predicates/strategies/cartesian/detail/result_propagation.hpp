@@ -15,6 +15,7 @@
 #include <boost/mp11/integral.hpp>
 #include <boost/mp11/list.hpp>
 #include <boost/mp11/map.hpp>
+#include <boost/mp11/bind.hpp>
 
 #include <boost/geometry/extensions/generic_robust_predicates/strategies/cartesian/detail/expression_tree.hpp>
 
@@ -265,6 +266,34 @@ struct all_reusable
 {
     using type = Reusables;
 };
+
+template
+<
+    typename Needle,
+    typename Haystacks
+>
+struct index_pair_impl
+{
+private:
+    template <typename List>
+    using contains = typename boost::mp11::mp_bind_back
+        <
+            boost::mp11::mp_contains,
+            Needle
+        >::fn<List>;
+    using outer = boost::mp11::mp_find_if<Haystacks, contains>;
+    using inner_list = boost::mp11::mp_at<Haystacks, outer>;
+    using inner = boost::mp11::mp_find<inner_list, Needle>;
+public:
+    using type = std::pair<outer, inner>;
+};
+
+template
+<
+    typename Needle,
+    typename Haystacks
+>
+using index_pair = typename index_pair_impl<Needle, Haystacks>::type;
 
 }} // namespace detail::generic_robust_predicates
 

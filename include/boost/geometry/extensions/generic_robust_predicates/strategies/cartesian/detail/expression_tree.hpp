@@ -160,6 +160,21 @@ struct static_constant_interface : public leaf
 template <typename Node>
 using is_leaf = boost::mp11::mp_bool<Node::is_leaf>;
 
+template <typename Node, typename IsLeaf = is_leaf<Node>>
+struct is_static_constant_impl
+{
+    using type = boost::mp11::mp_false;
+};
+
+template <typename Node>
+struct is_static_constant_impl<Node, boost::mp11::mp_true>
+{
+    using type = boost::mp11::mp_bool<Node::argn == 0>;
+};
+
+template <typename Node>
+using is_static_constant = typename is_static_constant_impl<Node>::type;
+
 template
 <
     typename In,

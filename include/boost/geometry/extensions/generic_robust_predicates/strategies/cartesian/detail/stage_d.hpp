@@ -38,7 +38,6 @@ struct stage_d
     template <typename ...Reals>
     static inline int apply(const Reals&... args)
     {
-        using root = Expression;
         using stack = typename boost::mp11::mp_unique<post_order<Expression>>;
         using evals = typename boost::mp11::mp_remove_if<stack, is_leaf>;
         using sizes = boost::mp11::mp_transform<expansion_size, evals>;

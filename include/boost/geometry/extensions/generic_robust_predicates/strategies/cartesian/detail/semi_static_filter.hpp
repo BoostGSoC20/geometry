@@ -20,6 +20,7 @@
 
 #include <boost/geometry/extensions/generic_robust_predicates/strategies/cartesian/detail/expression_tree.hpp>
 #include <boost/geometry/extensions/generic_robust_predicates/strategies/cartesian/detail/approximate.hpp>
+#include <boost/geometry/extensions/generic_robust_predicates/strategies/cartesian/detail/result_propagation.hpp>
 
 namespace boost { namespace geometry
 {
@@ -59,14 +60,17 @@ public:
     template <typename ...Reals>
     static inline int apply(const Reals&... args)
     {
+        using arg_list_input = argument_list<sizeof...(Reals)>;
+        using arg_list = boost::mp11::mp_list<arg_list_input>;
         std::array<CalculationType, sizeof...(Reals)> input
             {{ static_cast<ct>(args)... }};
         std::array<ct, boost::mp11::mp_size<all_evals>::value> results;
-        approximate_interim<all_evals, all_evals, ct>(results, input);
+        approximate_interim<all_evals, all_evals, arg_list, ct>(results, input);
+        using allm = boost::mp11::mp_push_front<arg_list, all_evals>;
         const ct error_bound =
-            get_approx<all_evals, ErrorExpression, ct>(results, input);
+            get_approx<ErrorExpression, allm, ct>(results, input);
         const ct det =
-            get_approx<all_evals, Expression, ct>(results, input);
+            get_approx<Expression, allm, ct>(results, input);
         if (det > error_bound)
         {
             return 1;

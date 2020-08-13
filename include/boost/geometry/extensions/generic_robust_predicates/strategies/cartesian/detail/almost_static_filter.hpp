@@ -39,7 +39,7 @@ template <typename Filter, std::size_t End>
 struct make_filter_impl<Filter, End, End>
 {
     template <typename ExtremaArray, typename ...Reals>
-    static Filter apply(const ExtremaArray& extrema, const Reals&... args)
+    static Filter apply(const ExtremaArray&, const Reals&... args)
     {
         Filter f(args...);
         return f;
@@ -83,11 +83,11 @@ public:
     inline void update_extrema(const Reals&... args)
     {
         std::array<ct, sizeof...(Reals)> input {{ static_cast<ct>(args)... }};
-        for(int i = 0; i < m_extrema.size() / 2; ++i)
+        for(unsigned int i = 0; i < m_extrema.size() / 2; ++i)
         {
             m_extrema[i] = std::max(m_extrema[i], input[i]);
         }
-        for(int i = m_extrema.size() / 2; i < m_extrema.size(); ++i)
+        for(unsigned int i = m_extrema.size() / 2; i < m_extrema.size(); ++i)
         {
             m_extrema[i] = std::min(m_extrema[i], input[i]);
         }
@@ -98,7 +98,7 @@ public:
     {
         bool changed = false;
         std::array<ct, sizeof...(Reals)> input {{ static_cast<ct>(args)... }};
-        for(int i = 0; i < m_extrema.size() / 2; ++i)
+        for(unsigned int i = 0; i < m_extrema.size() / 2; ++i)
         {
             if(input[i] > m_extrema[i])
             {
@@ -106,7 +106,7 @@ public:
                 m_extrema[i] = input[i];
             }
         }
-        for(int i = m_extrema.size() / 2; i < m_extrema.size(); ++i)
+        for(unsigned int i = m_extrema.size() / 2; i < m_extrema.size(); ++i)
         {
             if(input[i] < m_extrema[i])
             {

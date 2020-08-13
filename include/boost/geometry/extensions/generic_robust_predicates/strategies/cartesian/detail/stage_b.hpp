@@ -69,8 +69,10 @@ struct all_differences_zero_tail
         using eval = boost::mp11::mp_front<LeafDifferences>;
         using left = typename eval::left;
         using right = typename eval::right;
-        Real left_val = get_nth_real<left, left::argn, Real>(args...);
-        Real right_val = get_nth_real<right, right::argn, Real>(args...);
+        std::array<Real, sizeof...(Reals)> input
+            {{ static_cast<Real>(args)... }};
+        Real left_val = input[left::argn];
+        Real right_val = input[right::argn];
         using eval_index = boost::mp11::mp_find<Evals, eval>;
         constexpr std::size_t start =
             boost::mp11::mp_at<AccumulatedSizes, eval_index>::value;
@@ -125,7 +127,6 @@ struct stage_b
     template <typename ...Reals>
     static inline int apply(const Reals&... args)
     {
-        using root = Expression;
         using stack = typename boost::mp11::mp_unique<post_order<Expression>>;
         using evals = typename boost::mp11::mp_remove_if<stack, is_leaf>;
         using sizes = boost::mp11::mp_transform<expansion_size_stage_b, evals>;
