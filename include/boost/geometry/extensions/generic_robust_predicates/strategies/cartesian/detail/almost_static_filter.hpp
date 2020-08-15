@@ -61,7 +61,10 @@ private:
     extrema_array m_extrema;
     StaticFilter m_filter;
 public:
+    static constexpr bool stateful = true;
+    static constexpr bool updates = true;
     using computations = typename StaticFilter::computations;
+    static constexpr std::size_t arg_count = StaticFilter::arg_count;
 
     const StaticFilter& filter() const { return m_filter; }
     inline almost_static_filter()
@@ -117,6 +120,13 @@ public:
         return changed;
     }
 
+    template <typename ...Reals>
+    inline void update(const Reals&... args)
+    {
+        update_extrema(args...);
+        update_filter();
+    }
+
     inline void update_filter()
     {
         m_filter = make_filter_impl
@@ -125,6 +135,28 @@ public:
                     0,
                     2 * expression_max_argn::value
                 >::apply(m_extrema);
+    }
+
+        template
+    <
+        typename InputList,
+        typename StatefulStages,
+        typename RemainingStages,
+        typename RemainingReusables,
+        typename RemainingComputations,
+        typename ...InputArr
+    >
+    inline int staged_apply(const StatefulStages& stages, const InputArr&... inputs) const
+    {
+        return m_filter.template staged_apply
+            <
+                InputList,
+                StatefulStages,
+                RemainingStages,
+                RemainingReusables,
+                RemainingComputations,
+                InputArr...
+            >(stages, inputs...);
     }
 };
 

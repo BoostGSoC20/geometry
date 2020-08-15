@@ -189,8 +189,8 @@ inline bool expansion_strongly_nonoverlapping(Iter begin, Iter end)
             if( !nonadjacent(lesser, *it) )
             {
                 int exp_now, exp_lesser;
-                double lesser_mant = std::frexp(lesser, &exp_lesser);
-                double now_mant = std::frexp(*it, &exp_now);
+                std::frexp(lesser, &exp_lesser);
+                std::frexp(*it, &exp_now);
                 if(    std::abs(std::frexp(lesser, &exp_lesser)) != 0.5
                     || std::abs(std::frexp(*it, &exp_now)) != 0.5 )
                 {
@@ -472,7 +472,7 @@ inline OutIter expansion_sum_ze(InIter1 e_begin,
                                 InIter2 f_begin,
                                 InIter2 f_end,
                                 OutIter h_begin,
-                                OutIter h_end)
+                                OutIter)
 {
     assert(std::distance(e_begin, e_end) + std::distance(f_begin, f_end)
             == std::distance(e_begin, e_end));
@@ -1264,11 +1264,11 @@ struct expansion_plus_impl<1, 1, inplace, e_negate, f_negate, 2>
 {
     template<typename InIter1, typename InIter2, typename OutIter>
     static inline OutIter apply(InIter1 e_begin,
-                                InIter1 e_end,
+                                InIter1,
                                 InIter2 f_begin,
-                                InIter2 f_end,
+                                InIter2,
                                 OutIter h_begin,
-                                OutIter h_end)
+                                OutIter)
     {
         auto x = negate<e_negate>(*e_begin) + negate<f_negate>(*f_begin);
         auto y = two_sum_tail(negate<e_negate>(*e_begin),
@@ -1293,7 +1293,7 @@ struct expansion_plus_impl<e_length, 1, inplace, e_negate, f_negate, h_length>
     static inline OutIter apply(InIter1 e_begin,
                                 InIter1 e_end,
                                 InIter2 f_begin,
-                                InIter2 f_end,
+                                InIter2,
                                 OutIter h_begin,
                                 OutIter h_end)
     {
@@ -1328,7 +1328,7 @@ struct expansion_plus_impl
 {
     template<typename InIter1, typename InIter2, typename OutIter>
     static inline OutIter apply(InIter1 e_begin,
-                                InIter1 e_end,
+                                InIter1,
                                 InIter2 f_begin,
                                 InIter2 f_end,
                                 OutIter h_begin,
@@ -1441,7 +1441,7 @@ inline OutIter expansion_plus(
     Real e,
     Real f,
     OutIter h_begin,
-    OutIter h_end)
+    OutIter)
 {
     static_assert( f_length == 1 && e_length == 1, "e_length and f_length must be 1 if they are single components." );
     *(h_begin + 1) = e + f;
@@ -1538,7 +1538,7 @@ template
 inline std::enable_if_t<!StageB, OutIter> expansion_minus(Real e,
                                                          Real f,
                                                          OutIter h_begin,
-                                                         OutIter h_end)
+                                                         OutIter)
 {
     static_assert(e_length == 1 && f_length == 1, "e_length and f_length must be 1 if they are single components.");
     *(h_begin + 1) = e - f;
@@ -1559,7 +1559,7 @@ template
 inline std::enable_if_t<StageB, OutIter> expansion_minus(Real e,
                                                          Real f,
                                                          OutIter h_begin,
-                                                         OutIter h_end)
+                                                         OutIter)
 {
     static_assert(e_length == 1 && f_length == 1, "e_length and f_length must be 1 if they are single components.");
     *(h_begin) = e - f;
@@ -1637,7 +1637,7 @@ template<typename IndexList>
 struct distillation_impl<IndexList, 1>
 {
     template<typename Iter>
-    static inline Iter apply(Iter begin, Iter end)
+    static inline Iter apply(Iter, Iter end)
     {
         return end;
     }
@@ -1725,11 +1725,11 @@ struct expansion_times_impl<1, 1, 2, true>
 {
     template<typename InIter1, typename InIter2, typename OutIter>
     static inline OutIter apply(InIter1 e_begin,
-                                InIter1 e_end,
+                                InIter1,
                                 InIter2 f_begin,
-                                InIter2 f_end,
+                                InIter2,
                                 OutIter h_begin,
-                                OutIter h_end)
+                                OutIter)
     {
         auto x = *e_begin * *f_begin;
         auto y = two_product_tail(*e_begin, *f_begin, x);
@@ -1812,7 +1812,7 @@ template
 inline OutIter expansion_times(Real e,
                                Real f,
                                OutIter h_begin,
-                               OutIter h_end)
+                               OutIter)
 {
     static_assert(e_length == 1 && f_length == 1, "e_length and f_length must be 1 if they are single components.");
     *(h_begin + 1) = e * f;
@@ -2033,7 +2033,7 @@ private:
         boost::mp11::mp_at<AccumulatedSizes, eval_index>::value;
 public:
     template<typename ...Reals>
-    static Iter apply(Iter begin, Iter end, const Reals&... args)
+    static Iter apply(Iter begin, Iter, const Reals&... args)
     {
         std::array<Real, sizeof...(Reals)> input
             {{ static_cast<Real>(args)... }};
@@ -2084,7 +2084,7 @@ private:
         boost::mp11::mp_at<AccumulatedSizes, right_eval_index>::value;
 public:
     template<typename ...Reals>
-    static Iter apply(Iter begin, Iter end, const Reals&... args)
+    static Iter apply(Iter begin, Iter, const Reals&... args)
     {
         std::array<Real, sizeof...(Reals)> input
             {{ static_cast<Real>(args)... }};
@@ -2138,7 +2138,7 @@ private:
         boost::mp11::mp_at<AccumulatedSizes, left_eval_index>::value;
 public:
     template<typename ...Reals>
-    static Iter apply(Iter begin, Iter end, const Reals&... args)
+    static Iter apply(Iter begin, Iter, const Reals&... args)
     {
         std::array<Real, sizeof...(Reals)> input
             {{ static_cast<Real>(args)... }};
@@ -2198,7 +2198,7 @@ private:
         boost::mp11::mp_at<AccumulatedSizes, right_eval_index>::value;
 public:
     template<typename ...Reals>
-    static Iter apply(Iter begin, Iter end, const Reals&... args)
+    static Iter apply(Iter begin, Iter, const Reals&...)
     {
         return perform_op_impl
             <

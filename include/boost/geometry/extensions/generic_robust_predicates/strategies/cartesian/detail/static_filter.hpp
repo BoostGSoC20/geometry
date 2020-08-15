@@ -44,8 +44,13 @@ private:
             post_order<ErrorExpression>
         >;
     ct m_error_bound;
+    static constexpr std::size_t extrema_count =
+        max_argn<ErrorExpression>::value;
 public:
     using computations = boost::mp11::mp_list<Expression>;
+    static constexpr bool stateful = true;
+    static constexpr bool updates = false;
+    static constexpr std::size_t arg_count = max_argn<Expression>::value;
 
     inline static_filter() {}
 
@@ -54,25 +59,88 @@ public:
     template <typename ...Reals>
     inline static_filter(const Reals&... args)
         : m_error_bound(approximate_value<ErrorExpression, ct>(
-                std::array<ct, sizeof...(Reals)>
+                std::array<ct, extrema_count>
                     {static_cast<ct>(args)...}))
     {
-        static_assert(sizeof...(Reals) == max_argn<ErrorExpression>::value,
+        static_assert(sizeof...(Reals) == extrema_count,
                       "Number of constructor arguments is incompatible with error expression.");
     }
 
+    inline static_filter(const std::array<ct, extrema_count>& extrema)
+        : m_error_bound(approximate_value<ErrorExpression, ct>(extrema)) {}
+
     inline static_filter(const ct& b) : m_error_bound(b) {}
+
+    template
+    <
+        typename InputList,
+        typename StatefulStages,
+        typename RemainingStages,
+        typename RemainingReusables,
+        typename RemainingComputations,
+        typename ...InputArr
+    >
+    inline int staged_apply(const StatefulStages& stages, const InputArr&... inputs) const
+    {
+        using reusables = boost::mp11::mp_front<RemainingReusables>;
+        using comps = boost::mp11::mp_front<RemainingComputations>;
+        std::array<ct, boost::mp11::mp_size<reusables>::value> reusable;
+        using nonreusables = boost::mp11::mp_set_difference<comps, reusables>;
+        std::array<ct, boost::mp11::mp_size<nonreusables>::value> nonreusable;
+        using arg_list = boost::mp11::mp_push_back
+            <
+                InputList,
+                reusables,
+                nonreusables
+            >;
+        approximate_interim<comps, arg_list, ct>(inputs...,
+                                                 reusable,
+                                                 nonreusable);
+        const ct det = get_approx<Expression, arg_list, ct>(inputs...,
+                                                            reusable,
+                                                            nonreusable);
+        if (det > m_error_bound)
+        {
+            return 1;
+        }
+        else if (det < -m_error_bound)
+        {
+            return -1;
+        }
+        else if (m_error_bound == 0 && det == 0)
+        {
+            return 0;
+        }
+        else
+        {
+            using next_input_list =
+                boost::mp11::mp_push_back<InputList, reusables>;
+            using next_remaining_stages =
+                boost::mp11::mp_pop_front<RemainingStages>;
+            using next_remaining_reusables =
+                boost::mp11::mp_pop_front<RemainingReusables>;
+            using next_remaining_computations =
+                boost::mp11::mp_pop_front<RemainingComputations>;
+            return next_stage
+                <
+                    next_input_list,
+                    StatefulStages,
+                    next_remaining_stages,
+                    next_remaining_reusables,
+                    next_remaining_computations
+                >::apply(stages, inputs..., reusable);
+        }
+    }
 
     template <typename ...Reals>
     inline int apply(const Reals&... args) const
     {
         using arg_list_input = argument_list<sizeof...(Reals)>;
-        using arg_list = boost::mp11::mp_list<arg_list_input>;
+        using arg_list = boost::mp11::mp_list<evals, arg_list_input>;
         std::array<ct, sizeof...(Reals)> input {static_cast<ct>(args)...};
         std::array<ct, boost::mp11::mp_size<evals>::value> results;
-        approximate_interim<evals, evals, arg_list, ct>(results, input);
-        using allm = boost::mp11::mp_push_front<arg_list, evals>;
-        const ct det = get_approx<Expression, allm, ct>(results, input);
+        approximate_interim<evals, arg_list, ct>(results, input);
+        const ct det = get_approx<Expression, arg_list, ct>(results, input);
         if (det > m_error_bound)
         {
             return 1;

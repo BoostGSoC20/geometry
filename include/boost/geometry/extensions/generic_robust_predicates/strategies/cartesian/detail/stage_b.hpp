@@ -111,7 +111,7 @@ struct all_differences_zero_tail
     >
 {
     template <typename ...Reals>
-    static bool apply(Iter begin, Iter end, const Reals&... args)
+    static bool apply(Iter, Iter, const Reals&...)
     {
         return true;
     }
@@ -123,6 +123,7 @@ struct stage_b
     static constexpr bool stateful = false;
     static constexpr bool updates = false;
     using computations = boost::mp11::mp_list<>; //TODO: implement reusing previous computations later
+    static constexpr std::size_t arg_count = max_argn<Expression>::value;
 
     template <typename ...Reals>
     static inline int apply(const Reals&... args)

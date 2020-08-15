@@ -857,21 +857,84 @@ private:
     using evals = typename boost::mp11::mp_remove_if<stack, is_leaf>;
     using evals_sign_exact =
         typename boost::mp11::mp_copy_if<evals, is_sign_exact>;
+    using ct = Real;
 public:
     static constexpr bool stateful = false;
     static constexpr bool updates = false;
     using computations = evals_sign_exact;
+    static constexpr std::size_t arg_count = max_argn<Expression>::value;
+
+        template
+    <
+        typename InputList,
+        typename StatefulStages,
+        typename RemainingStages,
+        typename RemainingReusables,
+        typename RemainingComputations,
+        typename ...InputArr
+    >
+    static inline int staged_apply(const StatefulStages& stages, const InputArr&... inputs)
+    {
+        using reusables = boost::mp11::mp_front<RemainingReusables>;
+        using comps = boost::mp11::mp_front<RemainingComputations>;
+        std::array<ct, boost::mp11::mp_size<reusables>::value> reusable;
+        using nonreusables = boost::mp11::mp_set_difference<comps, reusables>;
+        std::array<ct, boost::mp11::mp_size<nonreusables>::value> nonreusable;
+        using arg_list = boost::mp11::mp_push_back
+            <
+                InputList,
+                reusables,
+                nonreusables
+            >;
+        approximate_interim<comps, arg_list, ct>(inputs...,
+                                                 reusable,
+                                                 nonreusable);
+        std::array<int, boost::mp11::mp_size<non_exact_signs>::value>
+            remainder_signs;
+        deduce_signs
+            <
+                non_exact_signs,
+                non_exact_signs,
+                arg_list,
+                ct
+            >(remainder_signs, inputs..., reusable, nonreusable);
+        int output = remainder_signs[
+            boost::mp11::mp_find<non_exact_signs, Expression>::value];
+        if ( output != sign_uncertain )
+        {
+            return output;
+        }
+        else
+        {
+            using next_input_list =
+                boost::mp11::mp_push_back<InputList, reusables>;
+            using next_remaining_stages =
+                boost::mp11::mp_pop_front<RemainingStages>;
+            using next_remaining_reusables =
+                boost::mp11::mp_pop_front<RemainingReusables>;
+            using next_remaining_computations =
+                boost::mp11::mp_pop_front<RemainingComputations>;
+            return next_stage
+                <
+                    next_input_list,
+                    StatefulStages,
+                    next_remaining_stages,
+                    next_remaining_reusables,
+                    next_remaining_computations
+                >::apply(stages, inputs..., reusable);
+        }
+    }
+
     template <typename ...Reals>
     static inline int apply(const Reals&... args)
     {
         using arg_list_input = argument_list<sizeof...(Reals)>;
-        using arg_list = boost::mp11::mp_list<arg_list_input>;
+        using arg_list = boost::mp11::mp_list<evals_sign_exact, arg_list_input>;
         std::array<Real, sizeof...(args)> input {{ static_cast<Real>(args)... }};
         std::array<Real, boost::mp11::mp_size<evals_sign_exact>::value>
             results_sign_exact;
         approximate_interim
             <
-                evals_sign_exact,
                 evals_sign_exact,
                 arg_list,
                 Real

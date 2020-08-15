@@ -280,7 +280,7 @@ private:
         <
             boost::mp11::mp_contains,
             Needle
-        >::fn<List>;
+        >::template fn<List>;
     using outer = boost::mp11::mp_find_if<Haystacks, contains>;
     using inner_list = boost::mp11::mp_at<Haystacks, outer>;
     using inner = boost::mp11::mp_find<inner_list, Needle>;
@@ -294,6 +294,70 @@ template
     typename Haystacks
 >
 using index_pair = typename index_pair_impl<Needle, Haystacks>::type;
+
+template
+<
+    typename InputList,
+    typename StatefulStages,
+    typename RemainingStages,
+    typename RemainingReusables,
+    typename RemainingComputations,
+    bool next_is_stateful =
+        boost::mp11::mp_front<RemainingStages>::stateful
+>
+struct next_stage
+{
+    template <typename ...InputArr>
+    static inline int apply(const StatefulStages& stages,
+                            const InputArr&... inputs)
+    {
+        using stage = boost::mp11::mp_front<RemainingStages>;
+        return stage::template staged_apply
+            <
+                InputList,
+                StatefulStages,
+                RemainingStages,
+                RemainingReusables,
+                RemainingComputations,
+                InputArr...
+            >(stages, inputs...);
+    }
+};
+
+template
+<
+    typename InputList,
+    typename StatefulStages,
+    typename RemainingStages,
+    typename RemainingReusables,
+    typename RemainingComputations
+>
+struct next_stage
+    <
+        InputList,
+        StatefulStages,
+        RemainingStages,
+        RemainingReusables,
+        RemainingComputations,
+        true
+    >
+{
+    template <typename ...InputArr>
+    static inline int apply(const StatefulStages& stages,
+                            const InputArr&... inputs)
+    {
+        using stage = boost::mp11::mp_front<RemainingStages>;
+        return std::get<stage>(stages).template staged_apply
+            <
+                InputList,
+                StatefulStages,
+                RemainingStages,
+                RemainingReusables,
+                RemainingComputations,
+                InputArr...
+            >(stages, inputs...);
+    }
+};
 
 }} // namespace detail::generic_robust_predicates
 
