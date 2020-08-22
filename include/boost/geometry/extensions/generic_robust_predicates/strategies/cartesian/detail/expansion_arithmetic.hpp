@@ -2037,8 +2037,8 @@ public:
     {
         std::array<Real, sizeof...(Reals)> input
             {{ static_cast<Real>(args)... }};
-        Real left_val = input[left::argn];
-        Real right_val = input[right::argn];
+        Real left_val = input[left::argn - 1];
+        Real right_val = input[right::argn - 1];
         return perform_op_impl<Op, 1, 1, false, Iter, StageB>
             ::apply(left_val, right_val, begin + start, begin + start + size);
     }
@@ -2088,7 +2088,7 @@ public:
     {
         std::array<Real, sizeof...(Reals)> input
             {{ static_cast<Real>(args)... }};
-        Real left_val = input[left::argn];
+        Real left_val = input[left::argn - 1];
         return perform_op_impl<Op, 1, right_size, false, Iter, StageB>::apply(
             left_val,
             begin + right_start,
@@ -2142,7 +2142,7 @@ public:
     {
         std::array<Real, sizeof...(Reals)> input
             {{ static_cast<Real>(args)... }};
-        Real right_val = input[right::argn];
+        Real right_val = input[right::argn - 1];
         return perform_op_impl<Op, left_size, 1, false, Iter, StageB>::apply(
             begin + left_start,
             begin + left_start + left_size,
