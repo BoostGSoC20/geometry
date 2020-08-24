@@ -31,6 +31,39 @@ using det2x2 = difference
         product<A12, A21>
     >;
 
+struct side_of_oriented_circle_2_helper
+{
+private:
+    using px = _1;
+    using py = _2;
+    using qx = _3;
+    using qy = _4;
+    using rx = _5;
+    using ry = _6;
+    using tx = _7;
+    using ty = _8;
+    using qpx = difference<qx, px>;
+    using qpy = difference<qy, py>;
+    using rpx = difference<rx, px>;
+    using rpy = difference<ry, py>;
+    using tpx = difference<tx, px>;
+    using tpy = difference<ty, py>;
+    using tqx = difference<tx, qx>;
+    using tqy = difference<ty, qy>;
+    using rqx = difference<rx, qx>;
+    using rqy = difference<ry, qy>;
+public:
+    using type = det2x2
+        <
+            difference<product<qpx, tpy>, product<qpy, tpx>>,
+            sum<product<tpx, tqx>, product<tpy, tqy>>,
+            difference<product<qpx, rpy>, product<qpy, rpx>>,
+            sum<product<rpx, rqx>, product<rpy, rqy>>
+        >;
+};
+
+using side_of_oriented_circle_2 = side_of_oriented_circle_2_helper::type;
+
 using orient2d = det2x2
         <
             difference <_1, _5>, difference<_2, _6>,
