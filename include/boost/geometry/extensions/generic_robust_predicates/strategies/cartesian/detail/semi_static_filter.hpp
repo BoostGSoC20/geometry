@@ -70,7 +70,14 @@ private:
             error_eval_stack_remainder
         >;
     using ct = CalculationType;
+    static constexpr std::size_t expr_max_arg = max_argn<Expression>::value;
+    static constexpr std::size_t error_expr_max_arg =
+        max_argn<ErrorExpression>::value;
 public:
+    static constexpr bool stateful = false;
+    static constexpr bool updates = false;
+    static constexpr std::size_t arg_count =
+        expr_max_arg > error_expr_max_arg ? expr_max_arg : error_expr_max_arg;
     template <typename ...Reals>
     static inline int apply(const Reals&... args)
     {

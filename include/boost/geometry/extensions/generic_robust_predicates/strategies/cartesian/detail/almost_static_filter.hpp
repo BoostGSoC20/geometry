@@ -24,28 +24,6 @@ namespace boost { namespace geometry
 namespace detail { namespace generic_robust_predicates
 {
 
-template <typename Filter, std::size_t N, std::size_t End>
-struct make_filter_impl
-{
-    template <typename ExtremaArray, typename ...Reals>
-    static Filter apply(ExtremaArray const& extrema, Reals const&... args)
-    {
-        return make_filter_impl<Filter, N + 1, End>
-            ::apply(extrema, args..., extrema[N]);
-    }
-};
-
-template <typename Filter, std::size_t End>
-struct make_filter_impl<Filter, End, End>
-{
-    template <typename ExtremaArray, typename ...Reals>
-    static Filter apply(ExtremaArray const& extrema, Reals const&... args)
-    {
-        Filter f(args...);
-        return f;
-    }
-};
-
 //The almost static filter holds an instance of a static filter and applies it
 //when it is called. Its static filter can be updated and applied like this:
 //
@@ -75,7 +53,10 @@ private:
     extrema_array m_extrema;
     StaticFilter m_filter;
 public:
+    static constexpr bool stateful = true;
+    static constexpr bool updates = true;
     static constexpr std::size_t arg_count = StaticFilter::arg_count;
+
     const StaticFilter& filter() const { return m_filter; }
     inline almost_static_filter()
     {
@@ -96,11 +77,11 @@ public:
     inline void update_extrema(Reals const&... args)
     {
         std::array<ct, sizeof...(Reals)> input {{ static_cast<ct>(args)... }};
-        for(int i = 0; i < m_extrema.size() / 2; ++i)
+        for(unsigned int i = 0; i < m_extrema.size() / 2; ++i)
         {
             m_extrema[i] = std::max(m_extrema[i], input[i]);
         }
-        for(int i = m_extrema.size() / 2; i < m_extrema.size(); ++i)
+        for(unsigned int i = m_extrema.size() / 2; i < m_extrema.size(); ++i)
         {
             m_extrema[i] = std::min(m_extrema[i], input[i]);
         }
@@ -111,7 +92,7 @@ public:
     {
         bool changed = false;
         std::array<ct, sizeof...(Reals)> input {{ static_cast<ct>(args)... }};
-        for(int i = 0; i < m_extrema.size() / 2; ++i)
+        for(unsigned int i = 0; i < m_extrema.size() / 2; ++i)
         {
             if(input[i] > m_extrema[i])
             {
@@ -119,7 +100,7 @@ public:
                 m_extrema[i] = input[i];
             }
         }
-        for(int i = m_extrema.size() / 2; i < m_extrema.size(); ++i)
+        for(unsigned int i = m_extrema.size() / 2; i < m_extrema.size(); ++i)
         {
             if(input[i] < m_extrema[i])
             {
@@ -129,15 +110,17 @@ public:
         }
         return changed;
     }
+    
+    template <typename ...Reals>
+    inline void update(const Reals&... args)
+    {
+        update_extrema(args...);
+        update_filter();
+    }
 
     inline void update_filter()
     {
-        m_filter = make_filter_impl
-                <
-                    StaticFilter,
-                    0,
-                    2 * expression_max_argn::value
-                >::apply(m_extrema);
+        m_filter = StaticFilter(m_extrema);
     }
 };
 

@@ -8,5 +8,6 @@ test-suite boost-geometry-extensions-generic_robust_predicates
     :
     [ run approximate.cpp ]
     [ run side3d.cpp : : : <debug-symbols>off ]
+    [ run staged.cpp ]
     ;
 

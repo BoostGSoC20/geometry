@@ -57,6 +57,8 @@ private:
     static constexpr std::size_t extrema_count =
         max_argn<ErrorExpression>::value;
 public:
+    static constexpr bool stateful = true;
+    static constexpr bool updates = false;
     static constexpr std::size_t arg_count = max_argn<Expression>::value;
 
     inline static_filter() {}
