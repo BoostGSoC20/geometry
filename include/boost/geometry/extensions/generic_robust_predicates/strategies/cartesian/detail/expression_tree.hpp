@@ -276,6 +276,9 @@ using  _9 = argument<9>;
 using _10 = argument<10>;
 using _11 = argument<11>;
 using _12 = argument<12>;
+using _13 = argument<13>;
+using _14 = argument<14>;
+using _15 = argument<15>;
 
 }} // namespace detail::generic_robust_predicates
 

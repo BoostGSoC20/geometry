@@ -96,6 +96,106 @@ public:
 
 using incircle = incircle_impl::type;
 
+template
+<
+    typename A11, typename A12, typename A13, typename A14,
+    typename A21, typename A22, typename A23, typename A24,
+    typename A31, typename A32, typename A33, typename A34,
+    typename A41, typename A42, typename A43, typename A44
+>
+struct det4x4_impl
+{
+private:
+    using minor1 = product
+        <
+            A11,
+            det3x3<A22, A23, A24, A32, A33, A34, A42, A43, A44>
+        >;
+    using minor2 = product
+        <
+            A21,
+            det3x3<A12, A13, A14, A32, A33, A34, A42, A43, A44>
+        >;
+    using minor3 = product
+        <
+            A31,
+            det3x3<A12, A13, A14, A22, A23, A24, A42, A43, A44>
+        >;
+    using minor4 = product
+        <
+            A41,
+            det3x3<A12, A13, A14, A22, A23, A24, A32, A33, A34>
+        >;
+public:
+    using type = sum
+        <
+            difference<minor1, minor2>,
+            difference<minor3, minor4>
+        >;
+};
+
+template
+<
+    typename A11, typename A12, typename A13, typename A14,
+    typename A21, typename A22, typename A23, typename A24,
+    typename A31, typename A32, typename A33, typename A34,
+    typename A41, typename A42, typename A43, typename A44
+>
+using det4x4 = typename det4x4_impl
+    <
+        A11, A12, A13, A14,
+        A21, A22, A23, A24,
+        A31, A32, A33, A34,
+        A41, A42, A43, A44
+    >::type;
+
+struct insphere_impl
+{
+private:
+    using aex = difference< _1, _13>;
+    using aey = difference< _2, _14>;
+    using aez = difference< _3, _15>;
+    using bex = difference< _4, _13>;
+    using bey = difference< _5, _14>;
+    using bez = difference< _6, _15>;
+    using cex = difference< _7, _13>;
+    using cey = difference< _8, _14>;
+    using cez = difference< _9, _15>;
+    using dex = difference<_10, _13>;
+    using dey = difference<_11, _14>;
+    using dez = difference<_12, _15>;
+    using alift = sum
+        <
+            product<aex, aex>,
+            sum<product<aey, aey>, product<aez, aez>>
+        >;
+    using blift = sum
+        <
+            product<bex, bex>,
+            sum<product<bey, bey>, product<bez, bez>>
+        >;
+    using clift = sum
+        <
+            product<cex, cex>,
+            sum<product<cey, cey>, product<cez, cez>>
+        >;
+    using dlift = sum
+        <
+            product<dex, dex>,
+            sum<product<dey, dey>, product<dez, dez>>
+        >;
+public:
+    using type = det4x4
+        <
+            aex, aey, aez, alift,
+            bex, bey, bez, blift,
+            cex, cey, cez, clift,
+            dex, dey, dez, dlift
+        >;
+};
+
+using insphere = insphere_impl::type;
+
 }} // namespace detail::generic_robust_predicates
 
 }} // namespace boost::geometry

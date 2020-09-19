@@ -12,15 +12,17 @@
 #ifndef BOOST_GEOMETRY_EXTENSIONS_GENERIC_ROBUST_PREDICATES_STRATEGIES_CARTESIAN_DETAIL_STAGE_D_HPP
 #define BOOST_GEOMETRY_EXTENSIONS_GENERIC_ROBUST_PREDICATES_STRATEGIES_CARTESIAN_DETAIL_STAGE_D_HPP
 
+#include <cstddef>
 #include <array>
-#include <iterator>
+#include <algorithm>
 
+#include <boost/mp11/integral.hpp>
 #include <boost/mp11/list.hpp>
+#include <boost/mp11/function.hpp>
 #include <boost/mp11/algorithm.hpp>
 
-#include <boost/geometry/extensions/generic_robust_predicates/strategies/cartesian/detail/approximate.hpp>
 #include <boost/geometry/extensions/generic_robust_predicates/strategies/cartesian/detail/expression_tree.hpp>
-#include <boost/geometry/extensions/generic_robust_predicates/strategies/cartesian/detail/expansion_arithmetic.hpp>
+#include <boost/geometry/extensions/generic_robust_predicates/strategies/cartesian/detail/expansion_eval.hpp>
 
 namespace boost { namespace geometry
 {
@@ -33,7 +35,7 @@ struct stage_d
 {
     static constexpr bool stateful = false;
     static constexpr bool updates = false;
-    using computations = boost::mp11::mp_list<>; //TODO: make use of previous comps
+    using computations = boost::mp11::mp_list<>;
     static constexpr std::size_t arg_count = max_argn<Expression>::value;
 
     template <typename ...Reals>
