@@ -25,8 +25,6 @@
 #include <boost/mp11/utility.hpp>
 #include <boost/mp11/algorithm.hpp>
 
-#include <boost/geometry/extensions/generic_robust_predicates/strategies/cartesian/detail/expression_tree.hpp>
-
 namespace boost { namespace geometry
 {
 
