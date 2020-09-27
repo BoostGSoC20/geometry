@@ -263,68 +263,112 @@ constexpr Real two_product_tail(Real a, Real b, Real x)
 
 template
 <
-    typename InIter,
-    typename OutIter,
-    typename Real,
-    bool NegateE = false,
-    bool NegateB = false
->
-inline OutIter grow_expansion(InIter e_begin,
-                              InIter e_end,
-                              Real b,
-                              OutIter h_begin,
-                              OutIter)
-{
-    assert(debug_expansion::expansion_nonoverlapping(e_begin, e_end));
-
-    Real Q = negate<NegateB>(b);
-    auto h_it = h_begin;
-    for(auto e_it = e_begin; e_it != e_end; ++e_it)
-    {
-        Real Q_new = negate<NegateE>(*e_it) + Q;
-        *h_it = two_sum_tail(negate<NegateE>(*e_it), Q, Q_new);
-        Q = Q_new;
-        ++h_it;
-    }
-    *h_it = Q;
-    ++h_it;
-    assert(debug_expansion::expansion_nonoverlapping(h_begin, h_it));
-    assert(  !debug_expansion::expansion_nonadjacent(e_begin, e_end)
-           || debug_expansion::expansion_nonadjacent(h_begin, h_it) );
-    return h_it;
-}
-
-template
-<
-    typename InIter,
+    bool zero_elimination,
     typename OutIter,
     typename Real
 >
-inline OutIter grow_expansion_difference(InIter e_begin,
-                                         InIter e_end,
-                                         Real b,
-                                         OutIter h_begin,
-                                         OutIter h_end)
+struct insert_ze_impl
 {
-    return grow_expansion
-        <
-            InIter,
-            OutIter,
-            Real,
-            false,
-            true
-        >(e_begin, e_end, b, h_begin, h_end);
+    static constexpr OutIter apply(OutIter out, Real val)
+    {
+        if(val == Real(0))
+        {
+            return out;
+        }
+        else
+        {
+            *out = val;
+            ++out;
+            return out;
+        }
+    }
+};
+
+template
+<
+    typename OutIter,
+    typename Real
+>
+struct insert_ze_impl<false, OutIter, Real>
+{
+    static constexpr OutIter apply(OutIter out, Real val)
+    {
+        *out = val;
+        ++out;
+        return out;
+    }
+};
+
+template
+<
+    bool zero_elimination,
+    typename OutIter,
+    typename Real
+>
+constexpr OutIter insert_ze(OutIter o, Real r)
+{
+    return insert_ze_impl<zero_elimination, OutIter, Real>::apply(o, r);
 }
 
 template
 <
+    bool zero_elimination,
+    typename OutIter,
+    typename Real
+>
+struct insert_ze_final_impl
+{
+    static constexpr OutIter apply(OutIter out, OutIter start, Real val)
+    {
+        if(val == Real(0) && out != start)
+        {
+            return out;
+        }
+        else
+        {
+            *out = val;
+            ++out;
+            return out;
+        }
+    }
+};
+
+template
+<
+    typename OutIter,
+    typename Real
+>
+struct insert_ze_final_impl<false, OutIter, Real>
+{
+    static constexpr OutIter apply(OutIter out, OutIter, Real val)
+    {
+        *out = val;
+        ++out;
+        return out;
+    }
+};
+
+template
+<
+    bool zero_elimination,
+    typename OutIter,
+    typename Real
+>
+constexpr OutIter insert_ze_final(OutIter o, OutIter s, Real r)
+{
+    return insert_ze_final_impl<zero_elimination, OutIter, Real>::apply(o, s, r);
+}
+
+template
+<
+    bool zero_elimination,
     typename InIter,
     typename OutIter,
     typename Real,
     bool NegateE = false,
     bool NegateB = false
 >
-inline OutIter grow_expansion_ze(InIter e_begin,
+constexpr OutIter grow_expansion(InIter e_begin,
                                  InIter e_end,
                                  Real b,
                                  OutIter h_begin,
@@ -338,37 +382,31 @@ inline OutIter grow_expansion_ze(InIter e_begin,
         Real Q_new = negate<NegateE>(*e_it) + Q;
         Real h_new = two_sum_tail(negate<NegateE>(*e_it), Q, Q_new);
         Q = Q_new;
-        if(h_new != 0)
-        {
-            *h_it = h_new;
-            ++h_it;
-        }
+        h_it = insert_ze<zero_elimination>(h_it, h_new);
     }
-    if( Q != 0 || h_it == h_begin )
-    {
-        *h_it = Q;
-        ++h_it;
-    }
+    h_it = insert_ze_final<zero_elimination>(h_it, h_begin, Q);
     assert(debug_expansion::expansion_nonoverlapping(h_begin, h_it));
     assert(  !debug_expansion::expansion_nonadjacent(e_begin, e_end)
-           || debug_expansion::expansion_nonadjacent(h_begin, h_it));
+           || debug_expansion::expansion_nonadjacent(h_begin, h_it) );
     return h_it;
 }
 
 template
 <
+    bool zero_elimination,
     typename InIter,
     typename OutIter,
     typename Real
 >
-inline OutIter grow_expansion_difference_ze(InIter e_begin,
+constexpr OutIter grow_expansion_difference(InIter e_begin,
                                             InIter e_end,
                                             Real b,
                                             OutIter h_begin,
                                             OutIter h_end)
 {
-    return grow_expansion_ze
+    return grow_expansion
         <
+            zero_elimination,
             InIter,
             OutIter,
             Real,
@@ -377,153 +415,120 @@ inline OutIter grow_expansion_difference_ze(InIter e_begin,
         >(e_begin, e_end, b, h_begin, h_end);
 }
 
-template
-<
-    typename InIter1,
-    typename InIter2,
-    typename OutIter,
-    bool NegateE = false,
-    bool NegateF = false
->
-inline OutIter expansion_sum(InIter1 e_begin,
-                             InIter1 e_end,
-                             InIter2 f_begin,
-                             InIter2 f_end,
-                             OutIter h_begin,
-                             OutIter)
+template <bool zero_elimination, bool NegateE, bool NegateB>
+struct expansion_sum_advance_impl
 {
-    using Real = typename std::iterator_traits<InIter1>::value_type;
-    assert(debug_expansion::expansion_nonoverlapping(e_begin, e_end));
-    assert(debug_expansion::expansion_nonoverlapping(f_begin, f_end));
-    const auto elen = std::distance(e_begin, e_end);
-    const auto flen = std::distance(f_begin, f_end);
-    auto f_it = f_begin;
-    grow_expansion
-        <
-            InIter1,
-            OutIter,
-            Real,
-            NegateE,
-            NegateF
-        >(e_begin, e_end, *f_it, h_begin, h_begin + elen + 1);
-    ++f_it;
-    for(auto i = 1; i < flen; ++i)
+    template <typename Real>
+    static constexpr bool apply(Real, Real)
     {
-        grow_expansion
-            <
-                InIter1,
-                OutIter,
-                Real,
-                false,
-                NegateF
-            >(h_begin + i,
-              h_begin + i + elen,
-              *f_it,
-              h_begin + i,
-              h_begin + i + elen + 1);
-        ++f_it;
+        return true;
     }
-    auto h_it = h_begin + elen + flen;
-    assert(debug_expansion::expansion_nonoverlapping(h_begin, h_it));
-    assert(   !debug_expansion::expansion_nonadjacent(e_begin, e_end)
-           || !debug_expansion::expansion_nonadjacent(f_begin, f_end)
-           || debug_expansion::expansion_nonadjacent(h_begin, h_begin + elen + flen));
-    return h_it;
-}
+};
 
-template
-<
-    typename InIter1,
-    typename InIter2,
-    typename OutIter
->
-inline OutIter expansion_difference(InIter1 e_begin,
-                                    InIter1 e_end,
-                                    InIter2 f_begin,
-                                    InIter2 f_end,
-                                    OutIter h_begin,
-                                    OutIter h_end)
+template <bool NegateE, bool NegateB>
+struct expansion_sum_advance_impl<true, NegateE, NegateB>
 {
-    return expansion_sum
-        <
-            InIter1,
-            InIter2,
-            OutIter,
-            false,
-            true
-        >(e_begin, e_end, f_begin, f_end, h_begin, h_end);
+    template <typename Real>
+    static constexpr bool apply(Real e, Real b)
+    {
+        Real Q = negate<NegateE>(e) + negate<NegateB>(b);
+        return two_sum_tail(negate<NegateE>(e), negate<NegateB>(b), Q) != Real(0);
+    }
+};
+
+
+template <bool zero_elimination, bool NegateE, bool NegateB, typename Real>
+constexpr bool expansion_sum_advance(Real e, Real b)
+{
+    return expansion_sum_advance_impl<zero_elimination, NegateE, NegateB>
+            ::apply(e, b);
 }
 
 template
 <
+    bool zero_elimination,
     typename InIter1,
     typename InIter2,
     typename OutIter,
     bool NegateE = false,
     bool NegateF = false
 >
-inline OutIter expansion_sum_ze(InIter1 e_begin,
+constexpr OutIter expansion_sum(InIter1 e_begin,
                                 InIter1 e_end,
                                 InIter2 f_begin,
                                 InIter2 f_end,
                                 OutIter h_begin,
                                 OutIter)
 {
-    assert(std::distance(e_begin, e_end) + std::distance(f_begin, f_end)
-            == std::distance(e_begin, e_end));
     using Real = typename std::iterator_traits<InIter1>::value_type;
     assert(debug_expansion::expansion_nonoverlapping(e_begin, e_end));
     assert(debug_expansion::expansion_nonoverlapping(f_begin, f_end));
     const auto elen = std::distance(e_begin, e_end);
     const auto flen = std::distance(f_begin, f_end);
     auto f_it = f_begin;
-    auto h_end_new = grow_expansion_ze
+    auto h_begin_i = h_begin;
+    auto h_it = grow_expansion
         <
+            zero_elimination,
             InIter1,
             OutIter,
             Real,
             NegateE,
             NegateF
         >(e_begin, e_end, *f_it, h_begin, h_begin + elen + 1);
+    if(expansion_sum_advance<zero_elimination, NegateE, NegateF>(*e_begin,
+                                                                 *f_it))
+    {
+        ++h_begin_i;
+    }
     ++f_it;
     for(auto i = 1; i < flen; ++i)
     {
-        h_end_new = grow_expansion_ze
+        h_it = grow_expansion
             <
+                zero_elimination,
                 InIter1,
                 OutIter,
                 Real,
                 false,
                 NegateF
-            >(h_begin + i,
-              h_end_new,
+            >(h_begin_i,
+              h_it,
               *f_it,
-              h_begin + i,
-              h_begin + h_end_new + 1);
+              h_begin_i,
+              h_it + 1);
+
+        if(expansion_sum_advance<zero_elimination, false, NegateF>(*h_begin_i,
+                                                                   *f_it))
+        {
+            ++h_begin_i;
+        }
         ++f_it;
     }
-    assert(debug_expansion::expansion_nonoverlapping(h_begin, h_end_new));
+    assert(debug_expansion::expansion_nonoverlapping(h_begin, h_it));
     assert(   !debug_expansion::expansion_nonadjacent(e_begin, e_end)
            || !debug_expansion::expansion_nonadjacent(f_begin, f_end)
-           || debug_expansion::expansion_nonadjacent(h_begin, h_end_new));
-    return h_end_new;
+           || debug_expansion::expansion_nonadjacent(h_begin, h_it));
+    return h_it;
 }
 
 template
 <
+    bool zero_elimination,
     typename InIter1,
     typename InIter2,
     typename OutIter
 >
-inline OutIter expansion_difference_ze(InIter1 e_begin,
+constexpr OutIter expansion_difference(InIter1 e_begin,
                                        InIter1 e_end,
                                        InIter2 f_begin,
                                        InIter2 f_end,
                                        OutIter h_begin,
                                        OutIter h_end)
 {
-    return expansion_sum_ze
+    return expansion_sum
         <
+            zero_elimination,
             InIter1,
             InIter2,
             OutIter,
@@ -534,90 +539,23 @@ inline OutIter expansion_difference_ze(InIter1 e_begin,
 
 template
 <
+    bool zero_elimination,
     typename InIter1,
     typename InIter2,
     typename OutIter,
     bool NegateE = false,
-    bool NegateF = false
+    bool NegateF = false,
+    bool e_no_zeros = false,
+    bool f_no_zeros = false
 >
-inline OutIter fast_expansion_sum_inplace(InIter1 e_begin,
-                                          InIter1 e_end,
-                                          InIter2 f_begin,
-                                          InIter2 f_end,
-                                          OutIter h_begin,
-                                          OutIter)
-{
-    assert(e_end == f_begin);
-    assert(f_begin != h_begin);
-    using Real = typename std::iterator_traits<InIter1>::value_type;
-    assert(debug_expansion::expansion_nonoverlapping(e_begin, e_end));
-    assert(debug_expansion::expansion_nonoverlapping(f_begin, f_end));
-    if(NegateE)
-    {
-        for(auto e_it = e_begin; e_it != e_end; ++e_it)
-        {
-            *e_it = -*e_it;
-        }
-    }
-    if(NegateF)
-    {
-        for(auto f_it = f_begin; f_it != f_end; ++f_it)
-        {
-            *f_it = -*f_it;
-        }
-    }
-    //TODO: The following may seem wasteful but in the more relevant case of zero-elimination
-    //      it should reduce to a single rotate.
-
-    auto e_old_end = e_end;
-    e_end = std::remove(e_begin, e_end, Real(0));
-    auto e_shortened = e_old_end - e_end;
-    std::rotate(e_end, f_begin, f_end);
-    f_begin = e_end;
-    auto f_old_end = f_end;
-    f_end = f_end - e_shortened;
-    f_end = std::remove(e_end, f_end, Real(0));
-    std::fill(f_end, f_old_end, Real(0));
-
-    std::inplace_merge(e_begin, e_end, f_end, abs_comp{});
-
-    auto g_it = e_begin;
-    auto g_end = f_end;
-    auto h_it = h_begin;
-    Real Q = *g_it + *(g_it + 1);
-    *h_it = fast_two_sum_tail(*(g_it + 1), *(g_it), Q);
-    g_it += 2;
-    ++h_it;
-    for(; g_it < g_end; ++g_it)
-    {
-        Real Q_new = Q + *g_it;
-        *h_it = two_sum_tail(Q, *g_it, Q_new);
-        Q = Q_new;
-        ++h_it;
-    }
-    *h_it = Q;
-    ++h_it;
-    //assert(debug_expansion::expansion_strongly_nonoverlapping(e_begin, f_end));
-    return h_it;
-}
-
-template
-<
-    typename InIter1,
-    typename InIter2,
-    typename OutIter,
-    bool NegateE = false,
-    bool NegateF = false
->
-inline OutIter fast_expansion_sum_inplace_ze(InIter1 e_begin,
+constexpr OutIter fast_expansion_sum_inplace(InIter1 e_begin,
                                              InIter1 e_end,
                                              InIter2 f_begin,
                                              InIter2 f_end,
                                              OutIter h_begin,
-                                             OutIter)
+                                             OutIter h_end)
 {
     assert(e_end == f_begin);
-    assert(h_begin == e_begin);
     assert(f_begin != h_begin);
     using Real = typename std::iterator_traits<InIter1>::value_type;
     assert(debug_expansion::expansion_nonoverlapping(e_begin, e_end));
@@ -636,265 +574,75 @@ inline OutIter fast_expansion_sum_inplace_ze(InIter1 e_begin,
             *f_it = -*f_it;
         }
     }
+
+    auto e_old_end = e_end;
+    typename std::iterator_traits<InIter1>::difference_type e_shortened = 0;
+    if(!e_no_zeros)
+    {
+        e_end = std::remove(e_begin, e_end, Real(0));
+        e_shortened = std::distance(e_end, e_old_end);
+    }
+    std::rotate(e_end, f_begin, f_end);
+    f_begin = e_end;
+    auto f_old_end = f_end;
+    f_end = f_end - e_shortened;
+    if(!f_no_zeros)
+    {
+        f_end = std::remove(f_begin, f_end, Real(0));
+    }
+    if(!zero_elimination)
+    {
+        std::fill(f_end, f_old_end, Real(0));
+    }
+
     std::inplace_merge(e_begin, e_end, f_end, abs_comp{});
-    auto g_it = e_begin;
-    auto g_end = f_end;
+
+    InIter1 g_it = e_begin;
+    InIter2 g_end = f_end;
     auto h_it = h_begin;
     Real Q = *g_it + *(g_it + 1);
-    Real h_new = fast_two_sum_tail(*(g_it + 1), *(g_it), Q);
+    auto h_new = fast_two_sum_tail(*(g_it + 1), *(g_it), Q);
+    h_it = insert_ze<zero_elimination>(h_it, h_new);
     g_it += 2;
-    if(h_new != 0)
-    {
-        *h_it = h_new;
-        ++h_it;
-    }
-    for(; g_it != g_end; ++g_it)
+    for(; g_it < g_end; ++g_it)
     {
         Real Q_new = Q + *g_it;
         h_new = two_sum_tail(Q, *g_it, Q_new);
-        if(h_new != 0)
-        {
-            *h_it = h_new;
-            ++h_it;
-        }
+        h_it = insert_ze<zero_elimination>(h_it, h_new);
         Q = Q_new;
     }
-    if( Q != 0 || h_it == h_begin )
+    h_it = insert_ze_final<zero_elimination>(h_it, h_begin, Q);
+    //assert(debug_expansion::expansion_strongly_nonoverlapping(h_begin, h_it));
+    if(zero_elimination)
     {
-        *h_it = Q;
-        ++h_it;
-    }
-    //assert(debug_expansion::expansion_strongly_nonoverlapping(e_begin, h_it));
-    return h_it;
-}
-
-template
-<
-    typename InIter1,
-    typename InIter2,
-    typename OutIter,
-    bool NegateE = false,
-    bool NegateF = false
->
-inline OutIter fast_expansion_sum_not_inplace(InIter1 e_begin,
-                                              InIter1 e_end,
-                                              InIter2 f_begin,
-                                              InIter2 f_end,
-                                              OutIter h_begin,
-                                              OutIter)
-{
-    assert(e_begin != h_begin);
-    assert(f_begin != h_begin);
-    using Real = typename std::iterator_traits<InIter1>::value_type;
-    assert(debug_expansion::expansion_nonoverlapping(e_begin, e_end));
-    assert(debug_expansion::expansion_nonoverlapping(f_begin, f_end));
-
-    auto e_it = e_begin;
-    auto f_it = f_begin;
-    Real Q;
-    if(std::abs(*f_it) > std::abs(*e_it))
-    {
-        Q = negate<NegateE>(*e_it);
-        ++e_it;
+        return h_it;
     }
     else
     {
-        Q = negate<NegateF>(*f_it);
-        ++f_it;
+        return h_end;
     }
-    auto h_it = h_begin;
-    if ((e_it != e_end) && (f_it != f_end))
-    {
-        Real Q_new;
-        if (std::abs(*f_it) > std::abs(*e_it))
-        {
-            Q_new = negate<NegateE>(*e_it) + Q;
-            auto h_new = fast_two_sum_tail(negate<NegateE>(*e_it), Q, Q_new);
-            *h_it = h_new;
-            ++e_it;
-        }
-        else
-        {
-            Q_new = negate<NegateF>(*f_it) + Q;
-            auto h_new = fast_two_sum_tail(negate<NegateF>(*f_it), Q, Q_new);
-            *h_it = h_new;
-            ++f_it;
-        }
-        Q = Q_new;
-        ++h_it;
-        while((e_it != e_end) && (f_it != f_end))
-        {
-            if (std::abs(*f_it) > std::abs(*e_it))
-            {
-                Q_new = negate<NegateE>(*e_it) + Q;
-                *h_it = two_sum_tail(negate<NegateE>(*e_it), Q, Q_new);
-                ++e_it;
-            }
-            else
-            {
-                Q_new = negate<NegateF>(*f_it) + Q;
-                *h_it = two_sum_tail(negate<NegateF>(*f_it), Q, Q_new);
-                ++f_it;
-            }
-            Q = Q_new;
-            ++h_it;
-        }
-    }
-    while(e_it != e_end)
-    {
-        Real Q_new = negate<NegateE>(*e_it) + Q;
-        *h_it = two_sum_tail(negate<NegateE>(*e_it), Q, Q_new);
-        Q = Q_new;
-        ++e_it;
-        ++h_it;
-    }
-    while(f_it != f_end)
-    {
-        Real Q_new = negate<NegateF>(*f_it) + Q;
-        *h_it = two_sum_tail(negate<NegateF>(*f_it), Q, Q_new);
-        Q = Q_new;
-        ++f_it;
-        ++h_it;
-    }
-    *h_it = Q;
-    ++h_it;
-    //assert(debug_expansion::expansion_strongly_nonoverlapping(h_begin, h_it));
-    return h_it;
 }
 
 template
 <
-    typename InIter1,
-    typename InIter2,
-    typename OutIter,
-    bool inplace,
-    bool NegateE,
-    bool NegateF
->
-struct fast_expansion_sum_impl
-{
-    static inline OutIter apply(InIter1 e_begin,
-                                InIter1 e_end,
-                                InIter2 f_begin,
-                                InIter2 f_end,
-                                OutIter h_begin,
-                                OutIter h_end)
-    {
-        return fast_expansion_sum_not_inplace
-            <
-                InIter1,
-                InIter2,
-                OutIter,
-                NegateE,
-                NegateF
-            >(e_begin, e_end, f_begin, f_end, h_begin, h_end);
-    }
-};
-
-template
-<
-    typename InIter1,
-    typename InIter2,
-    typename OutIter,
-    bool NegateE,
-    bool NegateF
->
-struct fast_expansion_sum_impl
-    <
-        InIter1,
-        InIter2,
-        OutIter,
-        true,
-        NegateE,
-        NegateF
-    >
-{
-    static inline OutIter apply(InIter1 e_begin,
-                                InIter1 e_end,
-                                InIter2 f_begin,
-                                InIter2 f_end,
-                                OutIter h_begin,
-                                OutIter h_end)
-    {
-        return fast_expansion_sum_inplace
-            <
-                InIter1,
-                InIter2,
-                OutIter,
-                NegateE,
-                NegateF
-            >(e_begin, e_end, f_begin, f_end, h_begin, h_end);
-    }
-};
-
-template
-<
-    typename InIter1,
-    typename InIter2,
-    typename OutIter,
-    bool inplace,
-    bool NegateE,
-    bool NegateF
->
-inline OutIter fast_expansion_sum(InIter1 e_begin,
-                                  InIter1 e_end,
-                                  InIter2 f_begin,
-                                  InIter2 f_end,
-                                  OutIter h_begin,
-                                  OutIter h_end)
-{
-    return fast_expansion_sum_impl
-        <
-            InIter1,
-            InIter2,
-            OutIter,
-            inplace,
-            NegateE,
-            NegateF
-        >::apply(e_begin, e_end, f_begin, f_end, h_begin, h_end);
-}
-
-template
-<
-    typename InIter1,
-    typename InIter2,
-    typename OutIter,
-    bool inplace
->
-inline OutIter fast_expansion_difference(InIter1 e_begin,
-                                         InIter1 e_end,
-                                         InIter2 f_begin,
-                                         InIter2 f_end,
-                                         OutIter h_begin,
-                                         OutIter h_end)
-{
-    return fast_expansion_sum
-        <
-            InIter1,
-            InIter2,
-            OutIter,
-            inplace,
-            false,
-            true
-        >(e_begin, e_end, f_begin, f_end, h_begin, h_end);
-}
-
-template
-<
+    bool zero_elimination,
     typename InIter1,
     typename InIter2,
     typename OutIter,
     bool NegateE = false,
     bool NegateF = false
 >
-inline OutIter fast_expansion_sum_not_inplace_ze(InIter1 e_begin,
+constexpr OutIter fast_expansion_sum_not_inplace(InIter1 e_begin,
                                                  InIter1 e_end,
                                                  InIter2 f_begin,
                                                  InIter2 f_end,
                                                  OutIter h_begin,
                                                  OutIter)
 {
+    assert(e_begin != h_begin);
+    assert(f_begin != h_begin);
     using Real = typename std::iterator_traits<InIter1>::value_type;
+
     assert(debug_expansion::expansion_nonoverlapping(e_begin, e_end));
     assert(debug_expansion::expansion_nonoverlapping(f_begin, f_end));
 
@@ -929,11 +677,7 @@ inline OutIter fast_expansion_sum_not_inplace_ze(InIter1 e_begin,
             ++f_it;
         }
         Q = Q_new;
-        if(h_new != 0)
-        {
-            *h_it = h_new;
-            ++h_it;
-        }
+        h_it = insert_ze<zero_elimination>(h_it, h_new);
         while((e_it != e_end) && (f_it != f_end))
         {
             if (std::abs(*f_it) > std::abs(*e_it))
@@ -949,48 +693,33 @@ inline OutIter fast_expansion_sum_not_inplace_ze(InIter1 e_begin,
                 ++f_it;
             }
             Q = Q_new;
-            if(h_new != 0)
-            {
-                *h_it = h_new;
-                ++h_it;
-            }
+            h_it = insert_ze<zero_elimination>(h_it, h_new);
         }
     }
     while(e_it != e_end)
     {
         Real Q_new = negate<NegateE>(*e_it) + Q;
         Real h_new = two_sum_tail(negate<NegateE>(*e_it), Q, Q_new);
+        h_it = insert_ze<zero_elimination>(h_it, h_new);
         Q = Q_new;
         ++e_it;
-        if(h_new != 0)
-        {
-            *h_it = h_new;
-            ++h_it;
-        }
     }
     while(f_it != f_end)
     {
         Real Q_new = negate<NegateF>(*f_it) + Q;
         Real h_new = two_sum_tail(negate<NegateF>(*f_it), Q, Q_new);
+        h_it = insert_ze<zero_elimination>(h_it, h_new);
         Q = Q_new;
         ++f_it;
-        if(h_new != 0)
-        {
-            *h_it = h_new;
-            ++h_it;
-        }
     }
-    if( Q != 0 || h_it == h_begin)
-    {
-        *h_it = Q;
-        ++h_it;
-    }
+    h_it = insert_ze_final<zero_elimination>(h_it, h_begin, Q);
     //assert(debug_expansion::expansion_strongly_nonoverlapping(h_begin, h_it));
     return h_it;
 }
 
 template
 <
+    bool zero_elimination,
     typename InIter1,
     typename InIter2,
     typename OutIter,
@@ -998,17 +727,18 @@ template
     bool NegateE,
     bool NegateF
 >
-struct fast_expansion_sum_ze_impl
+struct fast_expansion_sum_impl
 {
-    static inline OutIter apply(InIter1 e_begin,
-                                InIter1 e_end,
-                                InIter2 f_begin,
-                                InIter2 f_end,
-                                OutIter h_begin,
-                                OutIter h_end)
+    static constexpr OutIter apply(InIter1 e_begin,
+                                   InIter1 e_end,
+                                   InIter2 f_begin,
+                                   InIter2 f_end,
+                                   OutIter h_begin,
+                                   OutIter h_end)
     {
-        return fast_expansion_sum_not_inplace_ze
+        return fast_expansion_sum_not_inplace
             <
+                zero_elimination,
                 InIter1,
                 InIter2,
                 OutIter,
@@ -1020,14 +750,16 @@ struct fast_expansion_sum_ze_impl
 
 template
 <
+    bool zero_elimination,
     typename InIter1,
     typename InIter2,
     typename OutIter,
     bool NegateE,
     bool NegateF
 >
-struct fast_expansion_sum_ze_impl
+struct fast_expansion_sum_impl
     <
+        zero_elimination,
         InIter1,
         InIter2,
         OutIter,
@@ -1036,15 +768,16 @@ struct fast_expansion_sum_ze_impl
         NegateF
     >
 {
-    static inline OutIter apply(InIter1 e_begin,
-                                InIter1 e_end,
-                                InIter2 f_begin,
-                                InIter2 f_end,
-                                OutIter h_begin,
-                                OutIter h_end)
+    static constexpr OutIter apply(InIter1 e_begin,
+                                   InIter1 e_end,
+                                   InIter2 f_begin,
+                                   InIter2 f_end,
+                                   OutIter h_begin,
+                                   OutIter h_end)
     {
-        return fast_expansion_sum_inplace_ze
+        return fast_expansion_sum_inplace
             <
+                zero_elimination,
                 InIter1,
                 InIter2,
                 OutIter,
@@ -1056,6 +789,7 @@ struct fast_expansion_sum_ze_impl
 
 template
 <
+    bool zero_elimination,
     typename InIter1,
     typename InIter2,
     typename OutIter,
@@ -1063,15 +797,16 @@ template
     bool NegateE,
     bool NegateF
 >
-inline OutIter fast_expansion_sum_ze(InIter1 e_begin,
+constexpr OutIter fast_expansion_sum(InIter1 e_begin,
                                      InIter1 e_end,
                                      InIter2 f_begin,
                                      InIter2 f_end,
                                      OutIter h_begin,
                                      OutIter h_end)
 {
-    return fast_expansion_sum_ze_impl
+    return fast_expansion_sum_impl
         <
+            zero_elimination,
             InIter1,
             InIter2,
             OutIter,
@@ -1083,20 +818,22 @@ inline OutIter fast_expansion_sum_ze(InIter1 e_begin,
 
 template
 <
+    bool zero_elimination,
     typename InIter1,
     typename InIter2,
     typename OutIter,
     bool inplace
 >
-inline OutIter fast_expansion_difference_ze(InIter1 e_begin,
-                                            InIter1 e_end,
-                                            InIter2 f_begin,
-                                            InIter2 f_end,
-                                            OutIter h_begin,
-                                            OutIter h_end)
+inline OutIter fast_expansion_difference(InIter1 e_begin,
+                                         InIter1 e_end,
+                                         InIter2 f_begin,
+                                         InIter2 f_end,
+                                         OutIter h_begin,
+                                         OutIter h_end)
 {
-    return fast_expansion_sum_ze
+    return fast_expansion_sum
         <
+            zero_elimination,
             InIter1,
             InIter2,
             OutIter,
@@ -1108,102 +845,43 @@ inline OutIter fast_expansion_difference_ze(InIter1 e_begin,
 
 template
 <
+    bool zero_elimination,
     typename InIter,
     typename Real,
     typename OutIter
 >
-inline OutIter scale_expansion(InIter e_begin,
-                               InIter e_end,
-                               Real b,
-                               OutIter h_begin,
-                               OutIter)
-{
-    assert(debug_expansion::expansion_nonoverlapping(e_begin, e_end));
-
-    auto e_it = e_begin;
-    auto h_it = h_begin;
-    Real Q = *e_it * b;
-    *h_it = two_product_tail(*e_it, b, Q);
-    ++e_it;
-    ++h_it;
-    for(; e_it != e_end; ++e_it)
-    {
-        Real product_1 = *e_it * b;
-        Real product_0 = two_product_tail(*e_it, b, product_1);
-        Real sum = Q + product_0;
-        *h_it = two_sum_tail(Q, product_0, sum);
-        ++h_it;
-        Q = product_1 + sum;
-        *h_it = two_sum_tail(product_1, sum, Q);
-        ++h_it;
-    }
-    *h_it = Q;
-    ++h_it;
-
-    assert( debug_expansion::expansion_nonoverlapping(h_begin, h_it) );
-    assert(  !debug_expansion::expansion_nonadjacent(e_begin, e_end)
-           || debug_expansion::expansion_nonadjacent(h_begin, h_it) );
-    assert(  !debug_expansion::expansion_strongly_nonoverlapping(e_begin, e_end)
-           || debug_expansion::expansion_strongly_nonoverlapping(h_begin, h_it) );
-    return h_it;
-}
-
-template
-<
-    typename InIter,
-    typename Real,
-    typename OutIter
->
-inline OutIter scale_expansion_ze(InIter e_begin,
+constexpr OutIter scale_expansion(InIter e_begin,
                                   InIter e_end,
                                   Real b,
                                   OutIter h_begin,
                                   OutIter)
 {
     assert(debug_expansion::expansion_nonoverlapping(e_begin, e_end));
-    if(b == Real(0))
-    {
-        return h_begin;
-    }
+
     auto e_it = e_begin;
     auto h_it = h_begin;
     Real Q = *e_it * b;
-    Real h_new = two_product_tail(*e_it, b, Q);
-    if(h_new != 0)
-    {
-        *h_it = h_new;
-        ++h_it;
-    }
+    auto h_new = two_product_tail(*e_it, b, Q);
+    h_it = insert_ze<zero_elimination>(h_it, h_new);
     ++e_it;
     for(; e_it != e_end; ++e_it)
     {
         Real product_1 = *e_it * b;
         Real product_0 = two_product_tail(*e_it, b, product_1);
         Real sum = Q + product_0;
-        Real h_new = two_sum_tail(Q, product_0, sum);
-        if(h_new != 0)
-        {
-            *h_it = h_new;
-            ++h_it;
-        }
+        h_new = two_sum_tail(Q, product_0, sum);
+        h_it = insert_ze<zero_elimination>(h_it, h_new);
         Q = product_1 + sum;
         h_new = two_sum_tail(product_1, sum, Q);
-        if(h_new != 0)
-        {
-            *h_it = h_new;
-            ++h_it;
-        }
+        h_it = insert_ze<zero_elimination>(h_it, h_new);
     }
-    if( Q != 0 || h_it == h_begin )
-    {
-        *h_it = Q;
-        ++h_it;
-    }
+    h_it = insert_ze_final<zero_elimination>(h_it, h_begin, Q);
+
+    assert( debug_expansion::expansion_nonoverlapping(h_begin, h_it) );
     assert(  !debug_expansion::expansion_nonadjacent(e_begin, e_end)
            || debug_expansion::expansion_nonadjacent(h_begin, h_it) );
     assert(  !debug_expansion::expansion_strongly_nonoverlapping(e_begin, e_end)
            || debug_expansion::expansion_strongly_nonoverlapping(h_begin, h_it) );
-    assert( debug_expansion::expansion_nonoverlapping(h_begin, h_it) );
     return h_it;
 }
 
@@ -1214,6 +892,18 @@ struct greater_than_or_equal
     using fn = boost::mp11::mp_bool< Lhs::value >= Rhs::value >;
 };
 
+template <int s1, int s2>
+struct expansion_sum_length
+{
+    static constexpr int value = s1 != -1 && s2 != -1 ? s1 + s2 : -1;
+};
+
+template<int s1, int s2>
+struct expansion_product_length
+{
+    static constexpr int value = s1 != -1 && s2 != -1 ? 2 * s1 * s2 : -1;
+};
+
 template
 <
     int e_length,
@@ -1221,7 +911,7 @@ template
     bool inplace = false,
     bool e_negate = false,
     bool f_negate = false,
-    int h_length = (e_length == -1 || f_length == -1) ? -1 : e_length + f_length
+    int h_length = expansion_sum_length<e_length, f_length>::value
 >
 struct expansion_plus_impl
 {
@@ -1236,6 +926,7 @@ struct expansion_plus_impl
     {
         return fast_expansion_sum
             <
+                (false),
                 InIter1,
                 InIter2,
                 OutIter,
@@ -1247,7 +938,7 @@ struct expansion_plus_impl
 };
 
 template <bool inplace, bool e_negate, bool f_negate>
-struct expansion_plus_impl<1, 1, inplace, e_negate, f_negate, 2>
+struct expansion_plus_impl<1, 1, inplace, e_negate, f_negate>
 {
     template<typename InIter1, typename InIter2, typename OutIter>
     static inline OutIter apply(InIter1 e_begin,
@@ -1286,6 +977,7 @@ struct expansion_plus_impl<e_length, 1, inplace, e_negate, f_negate, h_length>
     {
         return grow_expansion
             <
+                (false),
                 InIter1,
                 OutIter,
                 typename std::iterator_traits<InIter2>::value_type,
@@ -1323,6 +1015,7 @@ struct expansion_plus_impl
     {
         return grow_expansion
             <
+                (false),
                 InIter2,
                 OutIter,
                 typename std::iterator_traits<InIter1>::value_type,
@@ -1333,7 +1026,7 @@ struct expansion_plus_impl
 };
 
 template<bool inplace, bool e_negate, bool f_negate>
-struct expansion_plus_impl<2, 2, inplace, e_negate, f_negate, 4>
+struct expansion_plus_impl<2, 2, inplace, e_negate, f_negate>
 {
     template<typename InIter1, typename InIter2, typename OutIter>
     static inline OutIter apply(InIter1 e_begin,
@@ -1345,6 +1038,7 @@ struct expansion_plus_impl<2, 2, inplace, e_negate, f_negate, 4>
     {
         return expansion_sum
             <
+                false,
                 InIter1,
                 InIter2,
                 OutIter,
@@ -1362,7 +1056,7 @@ template
     typename InIter1,
     typename InIter2,
     typename OutIter,
-    int result = (e_length == -1 || f_length == -1) ? -1 : e_length + f_length
+    int result = expansion_sum_length<e_length, f_length>::value
 >
 inline OutIter expansion_plus(InIter1 e_begin,
                               InIter1 e_end,
@@ -1383,7 +1077,7 @@ template
     typename InIter,
     typename Real,
     typename OutIter,
-    int result = (e_length == -1 || f_length == -1) ? -1 : e_length + f_length
+    int result = expansion_sum_length<e_length, f_length>::value
 >
 inline OutIter expansion_plus(InIter e_begin,
                               InIter e_end,
@@ -1392,7 +1086,7 @@ inline OutIter expansion_plus(InIter e_begin,
                               OutIter h_end)
 {
     static_assert( f_length == 1, "f_length must be 1 if f is a single component." );
-    return grow_expansion(e_begin, e_end, f, h_begin, h_end);
+    return grow_expansion<(false)>(e_begin, e_end, f, h_begin, h_end);
 }
 
 template
@@ -1403,7 +1097,7 @@ template
     typename InIter,
     typename Real,
     typename OutIter,
-    int result = (e_length == -1 || f_length == -1) ? -1 : e_length + f_length
+    int result = expansion_sum_length<e_length, f_length>::value
 >
 inline OutIter expansion_plus(Real e,
                               InIter f_begin,
@@ -1412,7 +1106,7 @@ inline OutIter expansion_plus(Real e,
                               OutIter h_end)
 {
     static_assert( e_length == 1, "e_length must be 1 if e is a single component." );
-    return grow_expansion(f_begin, f_end, e, h_begin, h_end);
+    return grow_expansion<(false)>(f_begin, f_end, e, h_begin, h_end);
 }
 
 template
@@ -1422,7 +1116,7 @@ template
     bool inplace,
     typename Real,
     typename OutIter,
-    int result = (e_length == -1 || f_length == -1) ? -1 : e_length + f_length
+    int result = expansion_sum_length<e_length, f_length>::value
 >
 inline OutIter expansion_plus(
     Real e,
@@ -1445,7 +1139,7 @@ template
     typename InIter1,
     typename InIter2,
     typename OutIter,
-    int result = (e_length == -1 || f_length == -1) ? -1 : e_length + f_length
+    int result = expansion_sum_length<e_length, f_length>::value
 >
 inline OutIter expansion_minus(InIter1 e_begin,
                                InIter1 e_end,
@@ -1467,7 +1161,7 @@ template
     typename InIter,
     typename Real,
     typename OutIter,
-    int result = (e_length == -1 || f_length == -1) ? -1 : e_length + f_length
+    int result = expansion_sum_length<e_length, f_length>::value
 >
 inline OutIter expansion_minus(InIter e_begin,
                                InIter e_end,
@@ -1493,7 +1187,7 @@ template
     typename Real,
     typename InIter,
     typename OutIter,
-    int result = (e_length == -1 || f_length == -1) ? -1 : e_length + f_length
+    int result = expansion_sum_length<e_length, f_length>::value
 >
 inline OutIter expansion_minus(Real e,
                                InIter f_begin,
@@ -1504,6 +1198,7 @@ inline OutIter expansion_minus(Real e,
     static_assert(e_length == 1, "e_length must be 1 if e is a single component.");
     return grow_expansion
         <
+            (false),
             InIter,
             OutIter,
             Real,
@@ -1520,7 +1215,7 @@ template
     bool StageB,
     typename Real,
     typename OutIter,
-    int result = (e_length == -1 || f_length == -1) ? -1 : e_length + f_length
+    int result = expansion_sum_length<e_length, f_length>::value
 >
 inline std::enable_if_t<!StageB, OutIter> expansion_minus(Real e,
                                                          Real f,
@@ -1541,7 +1236,7 @@ template
     bool StageB,
     typename Real,
     typename OutIter,
-    int result = (e_length == -1 || f_length == -1) ? -1 : e_length + f_length
+    int result = expansion_sum_length<e_length, f_length>::value
 >
 inline std::enable_if_t<StageB, OutIter> expansion_minus(Real e,
                                                          Real f,
@@ -1553,149 +1248,162 @@ inline std::enable_if_t<StageB, OutIter> expansion_minus(Real e,
     return h_begin + 1;
 }
 
-template <std::size_t N>
-struct minus_n_impl
-{
-    template<typename V>
-    using fn = boost::mp11::mp_size_t<V::value - N>;
-};
-
 template
 <
-    typename IndexList,
-    std::size_t index_length = boost::mp11::mp_size<IndexList>::value
+    int e_length,
+    int f_length,
+    bool inplace,
+    typename InIter,
+    typename Real,
+    typename OutIter,
+    int result = expansion_product_length<e_length, f_length>::value
 >
-struct distillation_impl
+inline OutIter expansion_times(InIter e_begin,
+                               InIter e_end,
+                               Real f,
+                               OutIter h_begin,
+                               OutIter h_end)
 {
-private:
-    static constexpr std::size_t length =
-        boost::mp11::mp_back<IndexList>::value;
-    using first_greater =
-        boost::mp11::mp_find_if_q
-            <
-                IndexList,
-                greater_than_or_equal<boost::mp11::mp_size_t< (length + 1) / 2 >>
-            >;
-    using not_first =
-        boost::mp11::mp_if
-            <
-                boost::mp11::mp_bool<(first_greater::value > 0)>,
-                first_greater,
-                boost::mp11::mp_size_t<first_greater::value + 1>
-            >;
-    using first_half = boost::mp11::mp_take<IndexList, not_first>;
-    static constexpr std::size_t first_length =
-        boost::mp11::mp_back<first_half>::value;
-    using second_half = boost::mp11::mp_transform_q
-        <
-            minus_n_impl<first_length>,
-            boost::mp11::mp_drop<IndexList, not_first>
-        >;
-public:
-    template <typename Iter>
-    static inline Iter apply(Iter begin, Iter end)
-    {
-        //The following divide and conquer scheme is a primitive heuristic
-        //and it would probably be a good idea to explore possible optimizations.
-        //
-        //TODO: Consider removing zeroes at this stage by writing output of second sub-
-        //distillation to end of first sub-distillation.
-        assert(static_cast<std::size_t>(std::distance(begin, end)) <= length);
-        auto first_end = distillation_impl<first_half>::
-            apply(begin, begin + first_length);
-        auto second_end = distillation_impl<second_half>::
-            apply(begin + first_length, end);
-
-        return expansion_plus
-            <
-                first_length,
-                length - first_length,
-                true
-            >(begin,
-              first_end,
-              begin + first_length,
-              second_end,
-              begin,
-              end);
-    }
-};
-
-template<typename IndexList>
-struct distillation_impl<IndexList, 1>
-{
-    template<typename Iter>
-    static inline Iter apply(Iter, Iter end)
-    {
-        return end;
-    }
-};
-
-template<typename IndexList, typename Iter>
-inline Iter distillation(Iter begin, Iter end)
-{
-    return distillation_impl<IndexList>::apply(begin, end);
+    static_assert(f_length == 1, "f_length must be 1 if f is a single component.");
+    return scale_expansion<(false)>(e_begin, e_end, f, h_begin, h_end);
 }
 
 template
 <
-    std::size_t e_length,
-    std::size_t f_length,
-    std::size_t result = 2 * e_length * f_length,
+    int e_length,
+    int f_length,
+    bool inplace,
+    typename InIter,
+    typename Real,
+    typename OutIter,
+    int result = expansion_product_length<e_length, f_length>::value
+>
+inline OutIter expansion_times(Real e,
+                               InIter f_begin,
+                               InIter f_end,
+                               OutIter h_begin,
+                               OutIter h_end)
+{
+    static_assert(e_length == 1, "e_length must be 1 if e is a single component.");
+    return scale_expansion<(false)>(f_begin, f_end, e, h_begin, h_end);
+}
+
+template
+<
+    int e_length,
+    int f_length,
+    bool inplace,
+    typename Real,
+    typename OutIter,
+    int result = expansion_product_length<e_length, f_length>::value
+>
+inline OutIter expansion_times(Real e,
+                               Real f,
+                               OutIter h_begin,
+                               OutIter)
+{
+    static_assert(e_length == 1 && f_length == 1, "e_length and f_length must be 1 if they are single components.");
+    *(h_begin + 1) = e * f;
+    *(h_begin) = two_product_tail(e, f, *(h_begin + 1));
+    return h_begin + 2;
+}
+
+template
+<
+    int e_length,
+    int f_length,
+    bool,
+    typename In1,
+    typename In2,
+    typename Out,
+    int result = expansion_product_length<e_length, f_length>::value
+>
+constexpr Out expansion_times(In1, In1, In2, In2, Out, Out);
+
+template
+<
+    int e_length,
+    int f_length,
+    int result = expansion_product_length<e_length, f_length>::value,
     bool e_smaller = e_length <= f_length
 >
 struct expansion_times_impl
 {
     template<typename InIter1, typename InIter2, typename OutIter>
-    static inline OutIter apply(InIter1 e_begin,
-                                InIter1 e_end,
-                                InIter2 f_begin,
-                                InIter2 f_end,
-                                OutIter h_begin,
-                                OutIter)
+    static constexpr OutIter apply(InIter1 e_begin,
+                                   InIter1 e_end,
+                                   InIter2 f_begin,
+                                   InIter2 f_end,
+                                   OutIter h_begin,
+                                   OutIter h_end)
     {
         assert(e_begin != h_begin && f_begin != h_begin);
 
         //TODO: Evaluate zero-elimination for very short expansions before multiplication.
-
-        auto h_it = h_begin;
-        for(auto e_it = e_begin; e_it != e_end; ++e_it)
+        const auto e_dyn_length = std::distance(e_begin, e_end);
+        if(e_dyn_length == 1)
         {
-            scale_expansion(f_begin, f_end, *e_it, h_it, h_it + 2 * f_length);
-            h_it += 2 * f_length;
+            return expansion_times<1, f_length, false>(*e_begin,
+                                                       f_begin,
+                                                       f_end,
+                                                       h_begin,
+                                                       h_end);
         }
-        using index_list = boost::mp11::mp_repeat_c
-            <
-                boost::mp11::mp_list<boost::mp11::mp_size_t<2 * f_length>>,
-                e_length
-            >;
-        using ps_index_list = boost::mp11::mp_partial_sum
-            <
-                index_list,
-                boost::mp11::mp_size_t<0>,
-                boost::mp11::mp_plus
-            >;
+        else if (e_dyn_length > 1 )
+        {
+            constexpr int e_length1 = e_length == -1 ? -1 : e_length / 2;
+            auto e_mid = e_begin + e_dyn_length / 2;
+            auto h_mid = expansion_times
+                <
+                    e_length1,
+                    f_length,
+                    false
+                >(e_begin, e_mid, f_begin, f_end, h_begin, h_end);
 
-        h_it = distillation<ps_index_list>(h_begin, h_it);
-        assert(debug_expansion::expansion_nonoverlapping(h_begin, h_it));
-        return h_it;
+            constexpr int e_length2 = e_length == -1 ? -1 : e_length - e_length1;
+            h_end = expansion_times
+                <
+                    e_length2,
+                    f_length,
+                    false
+                >(e_mid, e_end, f_begin, f_end, h_mid, h_end);
+
+            constexpr int summand_length1 =
+                expansion_product_length<e_length1, f_length>::value;
+            constexpr int summand_length2 =
+                expansion_product_length<e_length2, f_length>::value;
+            auto h_it = expansion_plus
+                <
+                    summand_length1,
+                    summand_length2,
+                    true
+                >(h_begin, h_mid, h_mid, h_end, h_begin, h_end);
+            assert(debug_expansion::expansion_nonoverlapping(h_begin, h_it));
+            return h_it;
+        }
+        else if (e_dyn_length == 0)
+        {
+            return h_begin;
+        }
+        assert(false);
     }
 };
 
 template
 <
-    std::size_t e_length,
-    std::size_t f_length,
-    std::size_t result
+    int e_length,
+    int f_length,
+    int result
 >
 struct expansion_times_impl<e_length, f_length, result, false>
 {
     template<typename InIter1, typename InIter2, typename OutIter>
-    static inline OutIter apply(InIter1 e_begin,
-                                InIter1 e_end,
-                                InIter2 f_begin,
-                                InIter2 f_end,
-                                OutIter h_begin,
-                                OutIter h_end)
+    static constexpr OutIter apply(InIter1 e_begin,
+                                   InIter1 e_end,
+                                   InIter2 f_begin,
+                                   InIter2 f_end,
+                                   OutIter h_begin,
+                                   OutIter h_end)
     {
         return expansion_times_impl<f_length, e_length>
             ::apply(f_begin,
@@ -1711,12 +1419,12 @@ template<>
 struct expansion_times_impl<1, 1, 2, true>
 {
     template<typename InIter1, typename InIter2, typename OutIter>
-    static inline OutIter apply(InIter1 e_begin,
-                                InIter1,
-                                InIter2 f_begin,
-                                InIter2,
-                                OutIter h_begin,
-                                OutIter)
+    static constexpr OutIter apply(InIter1 e_begin,
+                                   InIter1,
+                                   InIter2 f_begin,
+                                   InIter2,
+                                   OutIter h_begin,
+                                   OutIter)
     {
         auto x = *e_begin * *f_begin;
         auto y = two_product_tail(*e_begin, *f_begin, x);
@@ -1728,96 +1436,24 @@ struct expansion_times_impl<1, 1, 2, true>
 
 template
 <
-    std::size_t e_length,
-    std::size_t f_length,
+    int e_length,
+    int f_length,
     bool inplace,
     typename InIter1,
     typename InIter2,
     typename OutIter,
-    std::size_t result = 2 * e_length * f_length
+    int result = expansion_product_length<e_length, f_length>::value
 >
-inline OutIter expansion_times(InIter1 e_begin,
-                               InIter1 e_end,
-                               InIter2 f_begin,
-                               InIter2 f_end,
-                               OutIter h_begin,
-                               OutIter h_end)
+constexpr OutIter expansion_times(InIter1 e_begin,
+                                  InIter1 e_end,
+                                  InIter2 f_begin,
+                                  InIter2 f_end,
+                                  OutIter h_begin,
+                                  OutIter h_end)
 {
     return expansion_times_impl<e_length, f_length>::
         apply(e_begin, e_end, f_begin, f_end, h_begin, h_end);
 }
-
-template
-<
-    std::size_t e_length,
-    std::size_t f_length,
-    bool inplace,
-    typename InIter,
-    typename Real,
-    typename OutIter,
-    std::size_t result = 2 * e_length
->
-inline OutIter expansion_times(InIter e_begin,
-                               InIter e_end,
-                               Real f,
-                               OutIter h_begin,
-                               OutIter h_end)
-{
-    static_assert(f_length == 1, "f_length must be 1 if f is a single component.");
-    return scale_expansion(e_begin, e_end, f, h_begin, h_end);
-}
-
-template
-<
-    std::size_t e_length,
-    std::size_t f_length,
-    bool inplace,
-    typename InIter,
-    typename Real,
-    typename OutIter,
-    std::size_t result = 2 * f_length
->
-inline OutIter expansion_times(Real e,
-                               InIter f_begin,
-                               InIter f_end,
-                               OutIter h_begin,
-                               OutIter h_end)
-{
-    static_assert(e_length == 1, "e_length must be 1 if e is a single component.");
-    return scale_expansion(f_begin, f_end, e, h_begin, h_end);
-}
-
-template
-<
-    std::size_t e_length,
-    std::size_t f_length,
-    bool inplace,
-    typename Real,
-    typename OutIter,
-    std::size_t result = 2
->
-inline OutIter expansion_times(Real e,
-                               Real f,
-                               OutIter h_begin,
-                               OutIter)
-{
-    static_assert(e_length == 1 && f_length == 1, "e_length and f_length must be 1 if they are single components.");
-    *(h_begin + 1) = e * f;
-    *(h_begin) = two_product_tail(e, f, *(h_begin + 1));
-    return h_begin + 2;
-}
-
-template <std::size_t s1, std::size_t s2>
-struct expansion_sum_length
-{
-    static constexpr std::size_t value = s1 + s2;
-};
-
-template<std::size_t s1, std::size_t s2>
-struct expansion_product_length
-{
-    static constexpr std::size_t value = 2 * s1 * s2;
-};
 
 }} // namespace detail::generic_robust_predicates
 
