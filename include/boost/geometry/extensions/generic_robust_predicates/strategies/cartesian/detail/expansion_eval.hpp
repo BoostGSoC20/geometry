@@ -117,9 +117,9 @@ struct perform_op_impl
     >
 {
     template<typename ...Args>
-    static Iter apply(Args...args)
+    static constexpr Iter apply(Args...args)
     {
-        return expansion_plus<LeftLength, RightLength, Inplace>(args...);
+        return expansion_plus<LeftLength, RightLength, Inplace, false>(args...);
     }
 };
 
@@ -142,13 +142,14 @@ struct perform_op_impl
     >
 {
     template<typename ...Args>
-    static Iter apply(Args...args)
+    static constexpr Iter apply(Args...args)
     {
         return expansion_minus
             <
                 LeftLength,
                 RightLength,
                 Inplace,
+                false,
                 StageB
             >(args...);
     }
@@ -173,9 +174,9 @@ struct perform_op_impl
     >
 {
     template<typename ...Args>
-    static Iter apply(Args...args)
+    static constexpr Iter apply(Args...args)
     {
-        return expansion_times<LeftLength, RightLength, Inplace>(args...);
+        return expansion_times<LeftLength, RightLength, Inplace, false>(args...);
     }
 };
 
@@ -229,7 +230,7 @@ private:
         boost::mp11::mp_at<AccumulatedSizes, eval_index>::value;
 public:
     template<typename ...Reals>
-    static Iter apply(Iter begin, Iter, const Reals&... args)
+    static constexpr Iter apply(Iter begin, Iter, const Reals&... args)
     {
         std::array<Real, sizeof...(Reals)> input
             {{ static_cast<Real>(args)... }};
@@ -280,7 +281,7 @@ private:
         boost::mp11::mp_at<AccumulatedSizes, right_eval_index>::value;
 public:
     template<typename ...Reals>
-    static Iter apply(Iter begin, Iter, const Reals&... args)
+    static constexpr Iter apply(Iter begin, Iter, const Reals&... args)
     {
         std::array<Real, sizeof...(Reals)> input
             {{ static_cast<Real>(args)... }};
@@ -334,7 +335,7 @@ private:
         boost::mp11::mp_at<AccumulatedSizes, left_eval_index>::value;
 public:
     template<typename ...Reals>
-    static Iter apply(Iter begin, Iter, const Reals&... args)
+    static constexpr Iter apply(Iter begin, Iter, const Reals&... args)
     {
         std::array<Real, sizeof...(Reals)> input
             {{ static_cast<Real>(args)... }};
@@ -394,7 +395,7 @@ private:
         boost::mp11::mp_at<AccumulatedSizes, right_eval_index>::value;
 public:
     template<typename ...Reals>
-    static Iter apply(Iter begin, Iter, const Reals&...)
+    static constexpr Iter apply(Iter begin, Iter, const Reals&...)
     {
         return perform_op_impl
             <
@@ -428,7 +429,7 @@ template
 struct eval_expansions_impl
 {
     template<typename ...Reals>
-    static Iter apply(Iter begin, Iter end, const Reals&... args)
+    static constexpr Iter apply(Iter begin, Iter end, const Reals&... args)
     {
         eval_expansion_impl
             <
@@ -476,7 +477,7 @@ struct eval_expansions_impl
     >
 {
     template<typename ...Reals>
-    static Iter apply(Iter begin, Iter end, const Reals&... args)
+    static constexpr Iter apply(Iter begin, Iter end, const Reals&... args)
     {
         return eval_expansion_impl
             <
