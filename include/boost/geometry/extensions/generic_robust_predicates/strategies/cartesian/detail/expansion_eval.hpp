@@ -87,6 +87,8 @@ template <typename Expression> using expansion_size =
 template <typename Expression> using expansion_size_stage_b =
     boost::mp11::mp_size_t< expansion_size_impl<Expression, true>::value >;
 
+template <int> using no_zero_elimination_policy = boost::mp11::mp_false;
+
 template
 <
     operator_types Op,
@@ -119,7 +121,13 @@ struct perform_op_impl
     template<typename ...Args>
     static constexpr Iter apply(Args...args)
     {
-        return expansion_plus<LeftLength, RightLength, Inplace, false>(args...);
+        return expansion_plus
+            <
+                LeftLength,
+                RightLength,
+                Inplace,
+                no_zero_elimination_policy
+            >(args...);
     }
 };
 
@@ -149,8 +157,8 @@ struct perform_op_impl
                 LeftLength,
                 RightLength,
                 Inplace,
-                false,
-                StageB
+                StageB,
+                no_zero_elimination_policy
             >(args...);
     }
 };
@@ -176,7 +184,13 @@ struct perform_op_impl
     template<typename ...Args>
     static constexpr Iter apply(Args...args)
     {
-        return expansion_times<LeftLength, RightLength, Inplace, false>(args...);
+        return expansion_times
+            <
+                LeftLength,
+                RightLength,
+                Inplace,
+                no_zero_elimination_policy
+            >(args...);
     }
 };
 
