@@ -19,6 +19,7 @@
 #include <boost/mp11/set.hpp>
 #include <boost/mp11/list.hpp>
 #include <boost/mp11/map.hpp>
+#include <boost/mp11/bind.hpp>
 
 #include <boost/geometry/extensions/generic_robust_predicates/strategies/cartesian/detail/expression_tree.hpp>
 #include <boost/geometry/extensions/generic_robust_predicates/strategies/cartesian/detail/semi_static_filter.hpp>

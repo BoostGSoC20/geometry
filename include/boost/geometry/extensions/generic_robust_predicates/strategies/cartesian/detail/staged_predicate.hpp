@@ -101,9 +101,6 @@ struct update_all_impl<std::tuple<>>
     static void apply(Stages&, const Reals&...) {}
 };
 
-template <typename Stage>
-using get_arg_count = boost::mp11::mp_size_t<Stage::arg_count>;
-
 template
 <
     typename CalculationType,
@@ -117,22 +114,12 @@ private:
     using stateful_stages = boost::mp11::mp_copy_if<stages, is_stateful>;
     using updatable_stages = boost::mp11::mp_copy_if<stages, is_updatable>;
     stateful_stages m_stages;
-    using arg_counts = boost::mp11::mp_transform
-        <
-            get_arg_count,
-            boost::mp11::mp_list<Stages...>
-        >;
     using all_stages = boost::mp11::mp_list<Stages...>;
 public:
     static constexpr bool stateful =
         boost::mp11::mp_any_of<stages, is_stateful>::value;
     static constexpr bool updates =
         boost::mp11::mp_any_of<stages, is_updatable>::value;
-    static constexpr std::size_t arg_count = boost::mp11::mp_max_element
-        <
-            arg_counts,
-            boost::mp11::mp_less
-        >::value;
     template <typename ...Reals>
     inline staged_predicate(const Reals&... args) : m_stages(
             construct_stages_impl<stateful_stages>::apply(

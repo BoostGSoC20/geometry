@@ -107,7 +107,7 @@ template <std::size_t I, typename Expression>
 struct get_arg_or_out_impl<I, Expression, false>
 {
     template <typename In, typename Out>
-    static constexpr const auto& apply(const In&, const Out& out)
+    static constexpr auto apply(const In&, const Out& out)
     {
         return out[I];
     }
@@ -117,7 +117,7 @@ template <typename Expression, std::size_t Argn = Expression::argn>
 struct get_arg_or_const
 {
     template <typename In>
-    static constexpr const auto& apply(const In& in)
+    static constexpr auto apply(const In& in)
     {
         return in[Argn - 1];
     }
@@ -127,7 +127,7 @@ template <typename Expression>
 struct get_arg_or_const<Expression, 0>
 {
     template <typename In>
-    static constexpr const auto& apply(const In&)
+    static constexpr auto apply(const In&)
     {
         return Expression::value;
     }
@@ -137,7 +137,7 @@ template <std::size_t I, typename Expression>
 struct get_arg_or_out_impl<I, Expression, true>
 {
     template <typename In, typename Out>
-    static constexpr const auto& apply(const In& in, const Out&)
+    static constexpr auto apply(const In& in, const Out&)
     {
         return get_arg_or_const<Expression>::apply(in);
     }
