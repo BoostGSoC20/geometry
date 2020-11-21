@@ -67,10 +67,14 @@ constexpr std::array<int, 3> coeff_max(const std::array<int, 3> a, const std::ar
            a[0] > b[0]
         || (a[0] == b[0] && a[1] > b[1])
         || (a[0] == b[0] && a[1] == b[1] && a[2] > b[2]);
-    return a_bigger ? a : b;
+    return a_bigger ? a : b/*std::array<int, 3> {
+            a_bigger ? a[0] : b[0],
+            a_bigger ? a[1] : b[1],
+            a_bigger ? a[2] : b[2]
+        }*/;
 }
 
-constexpr std::array<int, 3> coeff_product(std::array<int, 3> a, std::array<int, 3> b)
+constexpr std::array<int, 3> coeff_product(const std::array<int, 3> a, const std::array<int, 3> b)
 {
     return std::array<int, 3> {
             a[0] + b[0],
@@ -79,7 +83,7 @@ constexpr std::array<int, 3> coeff_product(std::array<int, 3> a, std::array<int,
         };
 }
 
-constexpr std::array<int, 3> coeff_mult_by_1_plus_eps(std::array<int, 3> a)
+constexpr std::array<int, 3> coeff_mult_by_1_plus_eps(const std::array<int, 3> a)
 {
     return std::array<int, 3> {
             a[0],
@@ -88,12 +92,12 @@ constexpr std::array<int, 3> coeff_mult_by_1_plus_eps(std::array<int, 3> a)
         };
 }
 
-constexpr std::array<int, 3> coeff_inc_first(std::array<int, 3> a)
+constexpr std::array<int, 3> coeff_inc_first(const std::array<int, 3> a)
 {
     return std::array<int, 3> { a[0] + 1, a[1], a[2] };
 }
 
-constexpr std::array<int, 3> coeff_div_by_1_minus_eps(std::array<int, 3> a)
+constexpr std::array<int, 3> coeff_div_by_1_minus_eps(const std::array<int, 3> a)
 {
     return std::array<int, 3> {
         a[0],
@@ -104,7 +108,7 @@ constexpr std::array<int, 3> coeff_div_by_1_minus_eps(std::array<int, 3> a)
 
 template<int N>
 constexpr int round_to_next_2_pow() {
-    static_assert(N >= 1);
+    static_assert(N >= 1, "Expects positive integer.");
     int out = 1;
     while(out < N)
     {

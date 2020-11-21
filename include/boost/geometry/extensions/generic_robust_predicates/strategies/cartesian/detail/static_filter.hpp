@@ -18,8 +18,7 @@
 #include <boost/mp11/algorithm.hpp>
 
 #include <boost/geometry/extensions/generic_robust_predicates/strategies/cartesian/detail/expression_tree.hpp>
-#include <boost/geometry/extensions/generic_robust_predicates/strategies/cartesian/detail/approximate.hpp>
-#include <boost/geometry/extensions/generic_robust_predicates/strategies/cartesian/detail/result_propagation.hpp>
+#include <boost/geometry/extensions/generic_robust_predicates/strategies/cartesian/detail/expression_eval.hpp>
 
 namespace boost { namespace geometry
 {
@@ -47,12 +46,6 @@ class static_filter
 {
 private:
     using ct = CalculationType;
-    using stack = typename boost::mp11::mp_unique<post_order<Expression>>;
-    using evals = typename boost::mp11::mp_remove_if<stack, is_leaf>;
-    using error_eval_stack = boost::mp11::mp_unique
-        <
-            post_order<ErrorExpression>
-        >;
     ct m_error_bound;
     static constexpr std::size_t extrema_count =
         max_argn<ErrorExpression>::value;
@@ -67,7 +60,7 @@ public:
 
     template <typename ...Reals>
     inline static_filter(const Reals&... args)
-        : m_error_bound(approximate_value<ErrorExpression, ct>(
+        : m_error_bound(evaluate_expression<ErrorExpression>(
                 std::array<ct, extrema_count>
                     {static_cast<ct>(args)...}))
     {
@@ -76,19 +69,15 @@ public:
     }
 
     inline static_filter(const std::array<ct, extrema_count>& extrema)
-        : m_error_bound(approximate_value<ErrorExpression, ct>(extrema)) {}
+        : m_error_bound(evaluate_expression<ErrorExpression>(extrema)) {}
 
     inline static_filter(const ct& b) : m_error_bound(b) {}
 
     template <typename ...Reals>
     inline int apply(const Reals&... args) const
     {
-        using arg_list_input = argument_list<sizeof...(Reals)>;
-        using arg_list = boost::mp11::mp_list<evals, arg_list_input>;
         std::array<ct, sizeof...(Reals)> input {static_cast<ct>(args)...};
-        std::array<ct, boost::mp11::mp_size<evals>::value> results;
-        approximate_interim<evals, arg_list, ct>(results, input);
-        const ct det = get_approx<Expression, arg_list, ct>(results, input);
+        const ct det = evaluate_expression<Expression>(input);
         if (det > m_error_bound)
         {
             return 1;

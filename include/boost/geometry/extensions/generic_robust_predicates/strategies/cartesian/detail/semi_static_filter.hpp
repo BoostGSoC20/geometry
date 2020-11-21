@@ -19,8 +19,7 @@
 #include <boost/mp11/set.hpp>
 
 #include <boost/geometry/extensions/generic_robust_predicates/strategies/cartesian/detail/expression_tree.hpp>
-#include <boost/geometry/extensions/generic_robust_predicates/strategies/cartesian/detail/approximate.hpp>
-#include <boost/geometry/extensions/generic_robust_predicates/strategies/cartesian/detail/result_propagation.hpp>
+#include <boost/geometry/extensions/generic_robust_predicates/strategies/cartesian/detail/expression_eval.hpp>
 
 namespace boost { namespace geometry
 {
@@ -70,26 +69,23 @@ private:
             error_eval_stack_remainder
         >;
     using ct = CalculationType;
-    static constexpr std::size_t expr_max_arg = max_argn<Expression>::value;
-    static constexpr std::size_t error_expr_max_arg =
-        max_argn<ErrorExpression>::value;
 public:
     static constexpr bool stateful = false;
     static constexpr bool updates = false;
-    static constexpr std::size_t arg_count =
-        expr_max_arg > error_expr_max_arg ? expr_max_arg : error_expr_max_arg;
+    
     template <typename ...Reals>
     static inline int apply(const Reals&... args)
     {
-        using arg_list_input = argument_list<sizeof...(Reals)>;
-        using arg_list = boost::mp11::mp_list<all_evals, arg_list_input>;
-        std::array<CalculationType, sizeof...(Reals)> input
+        std::array<ct, sizeof...(Reals)> input
             {{ static_cast<ct>(args)... }};
         std::array<ct, boost::mp11::mp_size<all_evals>::value> results;
-        approximate_interim<all_evals, arg_list, ct>(results, input);
-        const ct error_bound =
-            get_approx<ErrorExpression, arg_list, ct>(results, input);
-        const ct det = get_approx<Expression, arg_list, ct>(results, input);
+        evaluate_expressions(input, results, all_evals{});
+        constexpr std::size_t i_eb =
+            boost::mp11::mp_find<all_evals, ErrorExpression>::value;
+        const ct error_bound = results[i_eb];
+        constexpr std::size_t i_e =
+            boost::mp11::mp_find<all_evals, Expression>::value;
+        const ct det = results[i_e];
         if (det > error_bound)
         {
             return 1;
