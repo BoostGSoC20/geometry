@@ -223,46 +223,21 @@ template <typename In, template <typename> class Anchor = is_leaf>
 using post_order =
     typename post_order_impl<In, boost::mp11::mp_list<>, Anchor>::type;
 
-template <typename Node, typename IsLeaf = is_leaf<Node>>
-struct max_argn_impl;
+template <typename Expression, operator_arities = Expression::operator_arity>
+constexpr std::size_t max_argn = 0;
 
-template <typename Node> using max_argn = typename max_argn_impl<Node>::type;
+template <typename Expression>
+constexpr std::size_t max_argn<Expression, operator_arities::binary> =
+    std::max(max_argn<typename Expression::left>,
+             max_argn<typename Expression::right>);
 
-template <typename Node>
-struct max_argn_impl<Node, boost::mp11::mp_false>
-{
-private:
-    using children_list = boost::mp11::mp_rename<Node, boost::mp11::mp_list>;
-    using children_max_argn =
-        boost::mp11::mp_transform<max_argn, children_list>;
-public:
-    using type = boost::mp11::mp_max_element
-        <
-            children_max_argn,
-            boost::mp11::mp_less
-        >;
-};
+template <typename Expression>
+constexpr std::size_t max_argn<Expression, operator_arities::unary> =
+    max_argn<typename Expression::child>;
 
-template <typename Node>
-struct max_argn_impl<Node, boost::mp11::mp_true>
-{
-    using type = boost::mp11::mp_size_t<Node::argn>;
-};
-
-template <typename Node, typename IsLeaf = is_leaf<Node>>
-struct is_static_constant_impl
-{
-    using type = boost::mp11::mp_false;   
-};
-  
-template <typename Node>
-struct is_static_constant_impl<Node, boost::mp11::mp_true>
-{
-    using type = boost::mp11::mp_bool<Node::argn == 0>;
-};
-        
-template <typename Node>
-using is_static_constant = typename is_static_constant_impl<Node>::type;
+template <typename Expression>
+constexpr std::size_t max_argn<Expression, operator_arities::nullary> =
+    Expression::argn;
 
 using  _1 = argument<1>;
 using  _2 = argument<2>;

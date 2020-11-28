@@ -273,7 +273,6 @@ private:
 public:
     static constexpr bool stateful = false;
     static constexpr bool updates = false;
-    static constexpr std::size_t arg_count = max_argn<Expression>::value;
 
     template <typename ...Reals>
     static inline int apply(const Reals&... args)

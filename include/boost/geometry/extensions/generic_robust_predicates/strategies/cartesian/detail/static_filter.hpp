@@ -47,12 +47,10 @@ class static_filter
 private:
     using ct = CalculationType;
     ct m_error_bound;
-    static constexpr std::size_t extrema_count =
-        max_argn<ErrorExpression>::value;
+    static constexpr std::size_t extrema_count = max_argn<ErrorExpression>;
 public:
     static constexpr bool stateful = true;
     static constexpr bool updates = false;
-    static constexpr std::size_t arg_count = max_argn<Expression>::value;
 
     inline static_filter() {}
 

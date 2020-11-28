@@ -21,13 +21,101 @@
 #include <boost/mp11/set.hpp>
 
 #include <boost/geometry/extensions/generic_robust_predicates/strategies/cartesian/detail/expression_tree.hpp>
-#include <boost/geometry/extensions/generic_robust_predicates/strategies/cartesian/detail/result_propagation.hpp>
 
 namespace boost { namespace geometry
 {
 
 namespace detail { namespace generic_robust_predicates
 {
+
+
+template <typename RemainingStages>
+constexpr bool has_next_and_is_stateful =
+    boost::mp11::mp_front<RemainingStages>::stateful;
+
+template <>
+constexpr bool has_next_and_is_stateful<boost::mp11::mp_list<>> = false;
+
+template
+<
+    typename StatefulStages,
+    typename RemainingStages,
+    bool next_is_stateful = has_next_and_is_stateful<RemainingStages>
+>
+struct next_stage
+{
+    template <typename ...Reals>
+    static inline int apply(const StatefulStages& stages,
+                            const Reals&... args)
+    {
+        using stage = boost::mp11::mp_front<RemainingStages>;
+        int sign = stage::template apply<>(args...);
+        if (sign == sign_uncertain)
+        {
+            return next_stage
+                <
+                    StatefulStages,
+                    boost::mp11::mp_pop_front<RemainingStages>
+                >::apply(stages, args...);
+        }
+        else
+        {
+            return sign;
+        }
+    }
+};
+
+template
+<
+    typename StatefulStages,
+    typename RemainingStages
+>
+struct next_stage
+    <
+        StatefulStages,
+        RemainingStages,
+        true
+    >
+{
+    template <typename ...Reals>
+    static inline int apply(const StatefulStages& stages,
+                            const Reals&... args)
+    {
+        using stage = boost::mp11::mp_front<RemainingStages>;
+        int sign = std::get<stage>(stages).apply(args...);
+        if (sign == sign_uncertain)
+        {
+            return next_stage
+                <
+                    StatefulStages,
+                    boost::mp11::mp_pop_front<RemainingStages>
+                >::apply(stages, args...);
+        }
+        else
+        {
+            return sign;
+        }
+    }
+};
+
+template
+<
+    typename StatefulStages
+>
+struct next_stage
+    <
+        StatefulStages,
+        boost::mp11::mp_list<>,
+        false
+    >
+{
+    template <typename ...Reals>
+    static inline int apply(const StatefulStages&,
+                            const Reals&...)
+    {
+        return sign_uncertain;
+    }
+};
 
 template <typename Stage> using is_stateful = boost::mp11::mp_bool<Stage::stateful>;
 
