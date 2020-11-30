@@ -14,6 +14,7 @@
 
 #include <cstddef>
 #include <type_traits>
+#include <algorithm>
 
 #include <boost/mp11/algorithm.hpp>
 #include <boost/mp11/integral.hpp>
