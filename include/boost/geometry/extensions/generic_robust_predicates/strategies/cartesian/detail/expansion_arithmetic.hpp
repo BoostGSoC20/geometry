@@ -216,8 +216,6 @@ constexpr Real two_sum_tail(Real a, Real b, Real x)
     Real b_rounded = b - b_virtual;
     Real a_rounded = a - a_virtual;
     Real y = a_rounded + b_rounded;
-
-    assert(debug_expansion::nonadjacent(x, y));
     return y;
 }
 
@@ -227,7 +225,6 @@ constexpr Real fast_two_sum_tail(Real a, Real b, Real x)
     assert(std::abs(a) >= std::abs(b) || a == 0);
     Real b_virtual = x - a;
     Real y = b - b_virtual;
-    assert(debug_expansion::nonadjacent(x, y));
     return y;
 }
 
@@ -239,7 +236,6 @@ constexpr Real two_difference_tail(Real a, Real b, Real x)
     Real b_rounded = b_virtual - b;
     Real a_rounded = a - a_virtual;
     Real y = a_rounded + b_rounded;
-    assert(debug_expansion::nonadjacent(x, y));
     return y;
 }
 
@@ -249,7 +245,6 @@ constexpr Real fast_two_difference_tail(Real a, Real b, Real x)
     assert(std::abs(a) >= std::abs(b) || a == 0);
     Real b_virtual = a - x;
     Real y = b_virtual - b;
-    assert(debug_expansion::nonadjacent(x, y));
     return y;
 }
 
@@ -257,8 +252,49 @@ template <typename Real>
 constexpr Real two_product_tail(Real a, Real b, Real x)
 {
     Real y = std::fma(a, b, -x);
-    assert(debug_expansion::nonadjacent(x, y));
     return y;
+}
+
+template <typename Real>
+constexpr Real splitter_helper()
+{
+    int digits = std::numeric_limits<Real>::digits;
+    int half = digits / 2;
+    int ceilhalf = half + (half * 2 == digits ? 0 : 1 );
+    Real out(1);
+    for(int i = 0; i < ceilhalf; ++i)
+    {
+        out *= Real(2);
+    }
+    return out + Real(1);
+}
+
+template <typename Real>
+constexpr Real splitter = splitter_helper<Real>();
+
+template <typename Real>
+constexpr std::array<Real, 2> split(Real a)
+{
+    Real c = splitter<Real> * a;
+    Real a_big = c - a;
+    Real a_hi = c - a_big;
+    Real a_lo = a - a_hi;
+    return std::array<Real, 2>{ a_hi, a_lo };
+}
+
+template <typename Real>
+constexpr Real two_product_tail_constexpr(Real a, Real b, Real x)
+{
+    const auto a_split = split(a);
+    const auto b_split = split(b);
+    Real a_hi_b_hi = a_split[0] * b_split[0];
+    Real err1 = x - a_hi_b_hi;
+    Real a_lo_b_hi = a_split[1] * b_split[0];
+    Real err2 = err1 - a_lo_b_hi;
+    Real a_hi_b_lo = a_split[0] * b_split[1];
+    Real err3 = err2 - a_hi_b_lo;
+    Real a_lo_b_lo = a_split[1] * b_split[1];
+    return a_lo_b_lo - err3;
 }
 
 template
