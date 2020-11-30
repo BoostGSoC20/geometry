@@ -605,7 +605,6 @@ constexpr void assign_to_group(
     do
     {
         group_factor_remaining = true;
-        bool summand_without_group_factor = false;
         for(std::size_t i = 0; i < Summands; ++i)
         {
             bool group_factor_in_summand = false;
@@ -699,9 +698,9 @@ extract_by_group(const std::array<std::array<arg_or_argdiff, Degree>, Summands>&
     static_assert(OutL == sizeof...(Is), "Index sequence must match output length");
     std::size_t out[OutL][2]{};
     std::size_t i_out = 0;
-    for(int i = 0; i < Summands; ++i)
+    for(std::size_t i = 0; i < Summands; ++i)
     {
-        for(int j = 0; j < Degree; ++j)
+        for(std::size_t j = 0; j < Degree; ++j)
         {
             if(group_assignments[i][j] == group_index)
             {
