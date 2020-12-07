@@ -12,6 +12,11 @@
 #ifndef BOOST_GEOMETRY_EXTENSIONS_GENERIC_ROBUST_PREDICATES_STRATEGIES_CARTESIAN_DETAIL_EXPRESSIONS_HPP
 #define BOOST_GEOMETRY_EXTENSIONS_GENERIC_ROBUST_PREDICATES_STRATEGIES_CARTESIAN_DETAIL_EXPRESSIONS_HPP
 
+#include <boost/mp11/integral.hpp>
+#include <boost/mp11/algorithm.hpp>
+#include <boost/mp11/list.hpp>
+#include <boost/mp11/utility.hpp>
+
 #include <boost/geometry/extensions/generic_robust_predicates/strategies/cartesian/detail/expression_tree.hpp>
 
 namespace boost { namespace geometry
@@ -20,181 +25,257 @@ namespace boost { namespace geometry
 namespace detail { namespace generic_robust_predicates
 {
 
-template
-<
-    typename A11, typename A12,
-    typename A21, typename A22
->
-using det2x2 = difference
+static constexpr std::size_t sizet_sqrt(std::size_t n)
+{
+    std::size_t out = 0;
+    while (out * out < n)
+    {
+        ++out;
+    }
+    return out;
+}
+
+template <typename I, typename Exp>
+struct indexed_exp
+{
+    using index = I;
+    using exp = Exp;
+};
+
+template <typename IExp>
+using extract_exp = typename IExp::exp;
+
+template <typename IExps>
+using extract_exps = boost::mp11::mp_transform<extract_exp, IExps>;
+
+template <typename I, typename N>
+struct remove_from_minor_q
+{
+    template <typename IExp>
+    using fn = boost::mp11::mp_bool
+        <
+               IExp::index::value / N::value == I::value
+            || IExp::index::value % N::value == 0
+        >;
+};
+
+template <typename N, typename IExps>
+struct minor_q
+{
+    template <typename I>
+    using fn = boost::mp11::mp_remove_if_q<IExps, remove_from_minor_q<I, N>>;
+};
+
+template <typename N, typename IExps>
+struct minor_factor_q
+{
+    template <typename I>
+    using fn = typename boost::mp11::mp_at_c<IExps, I::value * N::value>::exp;
+};
+
+template <typename Exp, typename ...Exps>
+struct alternating_sum_impl
+{
+    using type =
+        difference<Exp, typename alternating_sum_impl<Exps...>::type>;
+};
+
+template <typename Exp>
+struct alternating_sum_impl<Exp>
+{
+    using type = Exp;
+};
+
+template <typename ...Exps>
+using alternating_sum = typename alternating_sum_impl<Exps...>::type;
+
+template <typename ...Exps>
+struct det_impl;
+
+template <typename Exps>
+using make_det =
+    typename boost::mp11::mp_apply<det_impl, Exps>::type;
+
+template <typename ...Exps>
+struct det_impl
+{
+    static constexpr std::size_t N = sizet_sqrt(sizeof...(Exps));
+    static_assert(N * N == sizeof...(Exps),
+                  "Arguments must be a square matrix.");
+    using indices = boost::mp11::mp_iota_c<N * N>;
+    using minor_indices = boost::mp11::mp_iota_c<N>;
+    using indexed_exps = boost::mp11::mp_transform
+        <
+            indexed_exp,
+            indices,
+            boost::mp11::mp_list<Exps...>
+        >;
+    using indexed_minors = boost::mp11::mp_transform_q
+        <
+            minor_q<boost::mp11::mp_size_t<N>, indexed_exps>,
+            minor_indices
+        >;
+    using minors = boost::mp11::mp_transform<extract_exps, indexed_minors>;
+    using minor_dets = boost::mp11::mp_transform<make_det, minors>;
+    using minor_factors = boost::mp11::mp_transform_q
+        <
+            minor_factor_q<boost::mp11::mp_size_t<N>, indexed_exps>,
+            minor_indices
+        >;
+    using alt_summands = boost::mp11::mp_transform
+        <
+            product,
+            minor_factors,
+            minor_dets
+        >;
+    using type = boost::mp11::mp_apply
+        <
+            alternating_sum,
+            alt_summands
+        >;
+};
+
+template <typename Exp>
+struct det_impl<Exp>
+{
+    using type = Exp;
+};
+
+template <typename ...Exps>
+using det = typename det_impl<Exps...>::type;
+
+template <std::size_t N>
+struct orient_entry
+{
+    template <typename I>
+    using fn = difference
+        <
+            argument<I::value + 1>,
+            argument<N * N + I::value % N + 1>
+        >;
+};
+
+template <std::size_t N>
+using orient = boost::mp11::mp_apply
     <
-        product<A11, A22>,
-        product<A12, A21>
+        det,
+        boost::mp11::mp_transform_q
+            <
+                orient_entry<N>,
+                boost::mp11::mp_iota_c< N * N >
+            >
     >;
 
-using orient2d = det2x2
+template <std::size_t N>
+struct incircle_entry;
+
+template <std::size_t N, std::size_t Offset>
+struct incircle_entry_offset
+{
+    template <typename I>
+    using fn = typename incircle_entry<N>::template fn
+        <
+            boost::mp11::mp_size_t<I::value + Offset>
+        >;
+};
+
+template <typename ...Exps>
+struct multi_sum_impl;
+
+template <typename Exp, typename ...Exps>
+struct multi_sum_impl<Exp, Exps...>
+{
+    using type = sum<Exp, typename multi_sum_impl<Exps...>::type>;
+};
+
+template <typename Exp>
+struct multi_sum_impl<Exp>
+{
+    using type = Exp;
+};
+
+template <>
+struct multi_sum_impl<>
+{
+    using type = void;
+};
+
+template <std::size_t Offset>
+struct size_t_offset_q
+{
+    template <typename I>
+    using fn = boost::mp11::mp_size_t<I::value + Offset>;
+};
+
+template <std::size_t N>
+struct incircle_entry
+{
+private:
+    template <typename I>
+    using diff = difference
+            <
+                argument
+                    <
+                          N * ((I::value) / (N + 1))
+                        + (I::value) % (N + 1) + 1
+                    >,
+                argument
+                    <
+                        N * (N + 1) + (I::value) % (N + 1) + 1
+                    >
+            >;
+    template <std::size_t I>
+    using lift_indices = boost::mp11::mp_transform_q
+        <
+            size_t_offset_q<(N+ 1) * (I / (N + 1))>,
+            boost::mp11::mp_iota_c<N>
+        >;
+
+    template <std::size_t I>
+    using line_diffs =
+        boost::mp11::mp_transform
+            <
+                diff,
+                lift_indices<I>
+            >;
+
+    template <std::size_t I>
+    using line_squares =
+        boost::mp11::mp_transform
+            <
+                product,
+                line_diffs<I>,
+                line_diffs<I>
+            >;
+
+    template <std::size_t I>
+    using lift = typename boost::mp11::mp_apply<multi_sum_impl, line_squares<I>>::type;
+public:
+    template <typename I>
+    using fn =
+        boost::mp11::mp_if_c
+            <
+                (I::value % (N + 1) != 0),
+                diff<boost::mp11::mp_size_t<I::value - 1>>,
+                lift<I::value + N>
+            >;
+};
+
+template <std::size_t N>
+using innsphere = boost::mp11::mp_apply
     <
-        difference <_1, _5>, difference<_2, _6>,
-        difference <_3, _5>, difference<_4, _6>
+        det,
+        boost::mp11::mp_transform_q
+            <
+                incircle_entry<N>,
+                boost::mp11::mp_iota_c< (N + 1) * (N + 1) >
+            >
     >;
 
-template
-<
-    typename A11, typename A12, typename A13,
-    typename A21, typename A22, typename A23,
-    typename A31, typename A32, typename A33
->
-struct det3x3_impl
-{
-private:
-    using minor1 = product<A11, det2x2<A22, A23, A32, A33>>;
-    using minor2 = product<A21, det2x2<A12, A13, A32, A33>>;
-    using minor3 = product<A31, det2x2<A12, A13, A22, A23>>;
-public:
-    using type = sum<difference<minor1, minor2>, minor3>;
-};
-
-template
-<
-    typename A11, typename A12, typename A13,
-    typename A21, typename A22, typename A23,
-    typename A31, typename A32, typename A33
->
-using det3x3 = typename det3x3_impl
-    <
-        A11, A12, A13,
-        A21, A22, A23,
-        A31, A32, A33
-    >::type;
-
-using orient3d = det3x3
-    <
-        difference<_1, _10>, difference<_2, _11>, difference<_3, _12>,
-        difference<_4, _10>, difference<_5, _11>, difference<_6, _12>,
-        difference<_7, _10>, difference<_8, _11>, difference<_9, _12>
-    >;
-
-struct incircle_impl
-{
-private:
-    using adx = difference<_1, _7>;
-    using ady = difference<_2, _8>;
-    using bdx = difference<_3, _7>;
-    using bdy = difference<_4, _8>;
-    using cdx = difference<_5, _7>;
-    using cdy = difference<_6, _8>;
-    using alift = sum<product<adx, adx>, product<ady, ady>>;
-    using blift = sum<product<bdx, bdx>, product<bdy, bdy>>;
-    using clift = sum<product<cdx, cdx>, product<cdy, cdy>>;
-public:
-    using type = det3x3
-        <
-            alift, adx, ady,
-            blift, bdx, bdy,
-            clift, cdx, cdy
-        >;
-};
-
-using incircle = incircle_impl::type;
-
-template
-<
-    typename A11, typename A12, typename A13, typename A14,
-    typename A21, typename A22, typename A23, typename A24,
-    typename A31, typename A32, typename A33, typename A34,
-    typename A41, typename A42, typename A43, typename A44
->
-struct det4x4_impl
-{
-private:
-    using minor1 = product
-        <
-            A11,
-            det3x3<A22, A23, A24, A32, A33, A34, A42, A43, A44>
-        >;
-    using minor2 = product
-        <
-            A21,
-            det3x3<A12, A13, A14, A32, A33, A34, A42, A43, A44>
-        >;
-    using minor3 = product
-        <
-            A31,
-            det3x3<A12, A13, A14, A22, A23, A24, A42, A43, A44>
-        >;
-    using minor4 = product
-        <
-            A41,
-            det3x3<A12, A13, A14, A22, A23, A24, A32, A33, A34>
-        >;
-public:
-    using type = sum
-        <
-            difference<minor1, minor2>,
-            difference<minor3, minor4>
-        >;
-};
-
-template
-<
-    typename A11, typename A12, typename A13, typename A14,
-    typename A21, typename A22, typename A23, typename A24,
-    typename A31, typename A32, typename A33, typename A34,
-    typename A41, typename A42, typename A43, typename A44
->
-using det4x4 = typename det4x4_impl
-    <
-        A11, A12, A13, A14,
-        A21, A22, A23, A24,
-        A31, A32, A33, A34,
-        A41, A42, A43, A44
-    >::type;
-
-struct insphere_impl
-{
-private:
-    using aex = difference< _1, _13>;
-    using aey = difference< _2, _14>;
-    using aez = difference< _3, _15>;
-    using bex = difference< _4, _13>;
-    using bey = difference< _5, _14>;
-    using bez = difference< _6, _15>;
-    using cex = difference< _7, _13>;
-    using cey = difference< _8, _14>;
-    using cez = difference< _9, _15>;
-    using dex = difference<_10, _13>;
-    using dey = difference<_11, _14>;
-    using dez = difference<_12, _15>;
-    using alift = sum
-        <
-            product<aex, aex>,
-            sum<product<aey, aey>, product<aez, aez>>
-        >;
-    using blift = sum
-        <
-            product<bex, bex>,
-            sum<product<bey, bey>, product<bez, bez>>
-        >;
-    using clift = sum
-        <
-            product<cex, cex>,
-            sum<product<cey, cey>, product<cez, cez>>
-        >;
-    using dlift = sum
-        <
-            product<dex, dex>,
-            sum<product<dey, dey>, product<dez, dez>>
-        >;
-public:
-    using type = det4x4
-        <
-            aex, aey, aez, alift,
-            bex, bey, bez, blift,
-            cex, cey, cez, clift,
-            dex, dey, dez, dlift
-        >;
-};
-
-using insphere = insphere_impl::type;
+using orient2d = orient<2>;
+using orient3d = orient<3>;
+using incircle = innsphere<2>;
+using insphere = innsphere<3>;
 
 }} // namespace detail::generic_robust_predicates
 
