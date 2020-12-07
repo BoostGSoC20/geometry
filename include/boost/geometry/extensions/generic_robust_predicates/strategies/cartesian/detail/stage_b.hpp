@@ -71,8 +71,8 @@ struct all_differences_zero_tail
         using right = typename eval::right;
         std::array<Real, sizeof...(Reals)> input
             {{ static_cast<Real>(args)... }};
-        Real left_val = input[left::argn];
-        Real right_val = input[right::argn];
+        Real left_val = input[left::argn - 1];
+        Real right_val = input[right::argn - 1];
         using eval_index = boost::mp11::mp_find<Evals, eval>;
         constexpr std::size_t start =
             boost::mp11::mp_at<AccumulatedSizes, eval_index>::value;
