@@ -52,7 +52,7 @@ public:
     static constexpr bool stateful = true;
     static constexpr bool updates = false;
 
-    inline static_filter() {}
+    inline static_filter() : m_error_bound(0) {}
 
     ct error_bound() const { return m_error_bound; }
 
