@@ -654,6 +654,10 @@ constexpr OutIter fast_expansion_sum_inplace(InIter1 e_begin,
     h_it = insert_ze_final<zero_elimination>(h_it, h_begin, Q);
 
     assert(debug_expansion::expansion_nonoverlapping(h_begin, h_it));
+    if( !zero_elimination )
+    {
+        h_it = h_end;
+    }
     return h_it;
 }
 
@@ -1384,7 +1388,8 @@ constexpr OutIter expansion_times(Real e,
                                   OutIter h_end)
 {
     static_assert(e_length == 1, "e_length must be 1 if e is a single component.");
-    return scale_expansion<ze<result>::value>(f_begin, f_end, e, h_begin, h_end);
+    auto h_it = scale_expansion<ze<result>::value>(f_begin, f_end, e, h_begin, h_end);
+    return h_it;
 }
 
 template
@@ -1450,6 +1455,7 @@ struct expansion_times_impl
         assert(debug_expansion::expansion_nonoverlapping(f_begin, f_end));
         //TODO: Evaluate zero-elimination for very short expansions before multiplication.
         const auto e_dyn_length = std::distance(e_begin, e_end);
+        const auto h_old_end = h_end;
         if(e_dyn_length == 1)
         {
             auto h_it = expansion_times
@@ -1466,13 +1472,14 @@ struct expansion_times_impl
         {
             constexpr int e_length1 = e_length == -1 ? -1 : e_length / 2;
             auto e_mid = e_begin + e_dyn_length / 2;
-            auto h_mid = expansion_times
+            auto h_mid = h_begin + std::distance(e_begin, e_mid) * std::distance(f_begin, f_end) * 2;
+            h_mid = expansion_times
                 <
                     e_length1,
                     f_length,
                     false,
                     ZeroEliminationPolicy
-                >(e_begin, e_mid, f_begin, f_end, h_begin, h_end);
+                >(e_begin, e_mid, f_begin, f_end, h_begin, h_mid);
             constexpr int e_length2 = e_length == -1 ? -1 : e_length - e_length1;
             h_end = expansion_times
                 <
