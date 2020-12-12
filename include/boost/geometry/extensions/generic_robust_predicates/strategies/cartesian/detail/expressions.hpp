@@ -73,11 +73,20 @@ struct minor_factor_q
     using fn = typename boost::mp11::mp_at_c<IExps, I::value * N::value>::exp;
 };
 
-template <typename Exp, typename ...Exps>
-struct alternating_sum_impl
+template <typename ...Exps>
+struct alternating_sum_impl {};
+
+template <typename Exp1, typename Exp2, typename Exp3, typename ...Exps>
+struct alternating_sum_impl<Exp1, Exp2, Exp3, Exps...>
 {
     using type =
-        difference<Exp, typename alternating_sum_impl<Exps...>::type>;
+        sum<difference<Exp1, Exp2>, typename alternating_sum_impl<Exp3, Exps...>::type>;
+};
+
+template <typename Exp1, typename Exp2>
+struct alternating_sum_impl<Exp1, Exp2>
+{
+    using type = difference<Exp1, Exp2>;
 };
 
 template <typename Exp>
@@ -155,6 +164,9 @@ struct orient_entry
         >;
 };
 
+template <typename I>
+using collinear_entry = argument<I::value + 1>;
+
 template <std::size_t N>
 using orient = boost::mp11::mp_apply
     <
@@ -163,6 +175,17 @@ using orient = boost::mp11::mp_apply
             <
                 orient_entry<N>,
                 boost::mp11::mp_iota_c< N * N >
+            >
+    >;
+
+template <std::size_t N>
+using collinear = boost::mp11::mp_apply
+    <
+        det,
+        boost::mp11::mp_transform
+            <
+                collinear_entry,
+                boost::mp11::mp_iota_c<N * N>
             >
     >;
 
