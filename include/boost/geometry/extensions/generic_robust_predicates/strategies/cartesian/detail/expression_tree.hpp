@@ -77,7 +77,10 @@ struct internal_unary_node : internal_node<Child>
 template <typename Left, typename Right>
 struct sum : public internal_binary_node<Left, Right>
 {
-    static constexpr bool sign_exact = Left::is_leaf && Right::is_leaf;
+    static constexpr bool sign_exact =
+           (Left::is_leaf && Right::is_leaf)
+        || (   Left::sign_exact && Right::sign_exact
+            && Left::non_negative && Right::non_negative);
     static constexpr bool non_negative = Left::non_negative && Right::non_negative;
     static constexpr operator_types operator_type = operator_types::sum;
     using error_type = sum_error_type;

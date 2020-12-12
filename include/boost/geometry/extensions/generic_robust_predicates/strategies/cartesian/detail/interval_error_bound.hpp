@@ -204,6 +204,16 @@ public:
 };
 
 template <typename Left, typename Right, std::size_t MaxArgn>
+struct interval_impl<max<Left, Right>, MaxArgn>
+{
+private:
+    using left = typename interval_impl<Left, MaxArgn>::type;
+    using right = typename interval_impl<Right, MaxArgn>::type;
+public:
+    using type = max<left, right>;
+};
+
+template <typename Left, typename Right, std::size_t MaxArgn>
 struct interval_impl<difference<Left, Right>, MaxArgn>
 {
 private:

@@ -28,6 +28,9 @@
 #include <boost/geometry/extensions/generic_robust_predicates/strategies/cartesian/detail/expansion_arithmetic.hpp>
 #include <boost/geometry/extensions/generic_robust_predicates/strategies/cartesian/detail/semi_static_filter.hpp>
 
+#include <boost/geometry/extensions/generic_robust_predicates/strategies/cartesian/detail/static_filter.hpp>
+#include <boost/geometry/extensions/generic_robust_predicates/strategies/cartesian/detail/interval_error_bound.hpp>
+
 namespace boost { namespace geometry
 {
 
@@ -954,6 +957,19 @@ using fpg_semi_static = semi_static_filter
                     CalculationType,
                     Groups
                 >
+        >;
+
+template
+<
+    typename Expression,
+    typename CalculationType,
+    typename Groups = fpg::translation_fpg_groups_t<Expression>
+>
+using fpg_static = static_filter
+        <
+            Expression,
+            CalculationType,
+            interval<fpg_error_expression<Expression, CalculationType, Groups>>
         >;
 }} // namespace detail::generic_robust_predicates
 
