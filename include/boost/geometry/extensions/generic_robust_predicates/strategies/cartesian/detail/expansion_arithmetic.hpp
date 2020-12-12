@@ -31,7 +31,6 @@ namespace detail { namespace generic_robust_predicates
 {
 
 //TODO: Reevaluate the thresholds for various summation algorithms
-//TODO: Make use of zero-elimination
 //TODO: Reevaluate the zero-elimination threshold
 //TODO: Evaluate the use of AVX2-Gather instructions for post-summation zero-elimination
 
@@ -941,7 +940,7 @@ constexpr int expansion_product_length(int s1, int s2)
 
 template <int Length>
 using default_zero_elimination_policy =
-    boost::mp11::mp_bool<(Length > 4) || Length == -1>;
+    boost::mp11::mp_bool<(Length > 16) || Length == -1>;
 
 template <int Length1, int Length2>
 using default_fast_expansion_sum_policy =
@@ -1150,6 +1149,7 @@ template
     int f_length,
     bool inplace,
     template<int> class ze = default_zero_elimination_policy,
+    template<int, int> class = default_fast_expansion_sum_policy,
     typename InIter,
     typename Real,
     typename OutIter,
@@ -1171,6 +1171,7 @@ template
     int f_length,
     bool inplace,
     template<int> class ze = default_zero_elimination_policy,
+    template<int, int> class = default_fast_expansion_sum_policy,
     typename InIter,
     typename Real,
     typename OutIter,
@@ -1192,6 +1193,7 @@ template
     int f_length,
     bool inplace,
     template<int> class ze = default_zero_elimination_policy,
+    template<int, int> class = default_fast_expansion_sum_policy,
     typename Real,
     typename OutIter,
     int result = expansion_sum_length(e_length, f_length)
@@ -1250,6 +1252,7 @@ template
     bool inplace,
     bool StageB,
     template<int> class ze = default_zero_elimination_policy,
+    template<int, int> class = default_fast_expansion_sum_policy,
     typename InIter,
     typename Real,
     typename OutIter,
@@ -1280,6 +1283,7 @@ template
     bool inplace,
     bool StageB,
     template<int> class ze = default_zero_elimination_policy,
+    template<int, int> class = default_fast_expansion_sum_policy,
     typename Real,
     typename InIter,
     typename OutIter,
@@ -1310,6 +1314,7 @@ template
     bool inplace,
     bool StageB,
     template<int> class ze = default_zero_elimination_policy,
+    template<int, int> class = default_fast_expansion_sum_policy,
     typename Real,
     typename OutIter,
     int result = expansion_sum_length(e_length, f_length)
@@ -1335,6 +1340,7 @@ template
     bool inplace,
     bool StageB,
     template<int> class = default_zero_elimination_policy,
+    template<int, int> class = default_fast_expansion_sum_policy,
     typename Real,
     typename OutIter,
     int result = expansion_sum_length(e_length, f_length)
@@ -1355,6 +1361,7 @@ template
     int f_length,
     bool inplace,
     template<int> class ze = default_zero_elimination_policy,
+    template<int, int> class = default_fast_expansion_sum_policy,
     typename InIter,
     typename Real,
     typename OutIter,
@@ -1376,6 +1383,7 @@ template
     int f_length,
     bool inplace,
     template<int> class ze = default_zero_elimination_policy,
+    template<int, int> class = default_fast_expansion_sum_policy,
     typename InIter,
     typename Real,
     typename OutIter,
@@ -1398,6 +1406,7 @@ template
     int f_length,
     bool inplace,
     template<int> class ze = default_zero_elimination_policy,
+    template<int, int> class = default_fast_expansion_sum_policy,
     typename Real,
     typename OutIter,
     int result = expansion_product_length(e_length, f_length)

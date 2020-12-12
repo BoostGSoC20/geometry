@@ -117,7 +117,13 @@ struct all_differences_zero_tail
     }
 };
 
-template <typename Expression, typename Real>
+template
+<
+    typename Expression,
+    typename Real,
+    template <int> class ZEPolicy = default_zero_elimination_policy,
+    template <int, int> class FEPolicy = default_fast_expansion_sum_policy
+>
 struct stage_b
 {
     static constexpr bool stateful = false;
@@ -147,16 +153,17 @@ struct stage_b
         using leaf_differences =
             boost::mp11::mp_copy_if<evals, is_leaf_difference>;
 
-        /*auto final_exp_end = */eval_expansions_impl
+        auto most_significant = eval_expansions
             <
-                evals,
                 evals,
                 sizes,
                 accumulated_sizes,
                 decltype(results.begin()),
                 Real,
-                true
-            >::apply(results.begin(), results.end(), args...);
+                true,
+                ZEPolicy,
+                FEPolicy
+            >(results.begin(), results.end(), args...) - 1;
 
         bool all_zero = all_differences_zero_tail
                 <
@@ -171,13 +178,7 @@ struct stage_b
             return sign_uncertain;
         }
 
-        constexpr std::size_t final_exp_size =
-            boost::mp11::mp_back<sizes>::value;
-        auto is_zero = [](Real d) { return d == Real(0); };
-        auto most_significant = std::find_if_not(
-                results.crbegin(),
-                results.crbegin() + final_exp_size, is_zero);
-        if( most_significant == results.crbegin() + final_exp_size)
+        if( *most_significant == 0)
         {
             return 0;
         }

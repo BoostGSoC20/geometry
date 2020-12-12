@@ -30,12 +30,17 @@ namespace boost { namespace geometry
 namespace detail { namespace generic_robust_predicates
 {
 
-template <typename Expression, typename Real>
+template
+<
+    typename Expression,
+    typename Real,
+    template <int> class ZEPolicy = default_zero_elimination_policy,
+    template <int, int> class FEPolicy = default_fast_expansion_sum_policy
+>
 struct stage_d
 {
     static constexpr bool stateful = false;
     static constexpr bool updates = false;
-    using computations = boost::mp11::mp_list<>;
 
     template <typename ...Reals>
     static inline int apply(const Reals&... args)
@@ -58,24 +63,18 @@ struct stage_d
             std::array<Real, boost::mp11::mp_back<accumulated_sizes>::value>;
         result_array results;
 
-        /*auto final_exp_end = */eval_expansions_impl
+        auto most_significant = eval_expansions
             <
-                evals,
                 evals,
                 sizes,
                 accumulated_sizes,
                 decltype(results.begin()),
-                Real
-            >::apply(results.begin(), results.end(), args...);
-
-
-        constexpr std::size_t final_exp_size =
-            boost::mp11::mp_back<sizes>::value;
-        auto is_zero = [](Real d) { return d == Real(0); };
-        auto most_significant = std::find_if_not(
-                results.crbegin(),
-                results.crbegin() + final_exp_size, is_zero);
-        if( most_significant == results.crbegin() + final_exp_size)
+                Real,
+                false,
+                ZEPolicy,
+                FEPolicy
+            >(results.begin(), results.end(), args...) - 1;
+        if( *most_significant == 0)
         {
             return 0;
         }
