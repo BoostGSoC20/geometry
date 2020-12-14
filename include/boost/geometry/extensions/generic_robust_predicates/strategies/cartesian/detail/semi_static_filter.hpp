@@ -72,7 +72,15 @@ private:
 public:
     static constexpr bool stateful = false;
     static constexpr bool updates = false;
-    
+
+    template <typename ...Reals>
+    static inline ct error_bound(const Reals&... args)
+    {
+        std::array<ct, sizeof...(Reals)> input
+            {{ static_cast<ct>(args)... }};
+        return evaluate_expression<ErrorExpression>(input);
+    }
+
     template <typename ...Reals>
     static inline int apply(const Reals&... args)
     {

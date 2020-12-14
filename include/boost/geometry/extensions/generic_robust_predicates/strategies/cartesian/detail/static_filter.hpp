@@ -12,6 +12,7 @@
 #ifndef BOOST_GEOMETRY_EXTENSIONS_GENERIC_ROBUST_PREDICATES_STRATEGIES_CARTESIAN_DETAIL_STATIC_FILTER_HPP
 #define BOOST_GEOMETRY_EXTENSIONS_GENERIC_ROBUST_PREDICATES_STRATEGIES_CARTESIAN_DETAIL_STATIC_FILTER_HPP
 
+#include <limits>
 #include <array>
 
 #include <boost/mp11/list.hpp>
@@ -52,9 +53,9 @@ public:
     static constexpr bool stateful = true;
     static constexpr bool updates = false;
 
-    inline static_filter() : m_error_bound(0) {}
+    inline static_filter() : m_error_bound(std::numeric_limits<ct>::max()) {}
 
-    ct error_bound() const { return m_error_bound; }
+    inline ct error_bound() const { return m_error_bound; }
 
     template <typename ...Reals>
     inline static_filter(const Reals&... args)

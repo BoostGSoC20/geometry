@@ -168,6 +168,7 @@ struct compute_static_filter_error<Expression, Real, operator_arities::binary, f
             }
         }
         assert(false);
+        return { 0, 0 };
     }
 };
 
