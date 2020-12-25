@@ -914,6 +914,7 @@ struct error_expression
 {
 private:
     static constexpr std::size_t deg = degree<Expression>;
+public:
     static constexpr Real delta_1 =
           compute_static_filter_error<Expression, Real>::apply().error
         * round_up_1_n<Real>(deg);

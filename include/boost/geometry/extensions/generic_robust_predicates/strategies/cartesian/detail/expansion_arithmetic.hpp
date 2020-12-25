@@ -70,7 +70,7 @@ constexpr Real negate(Real a)
 namespace debug_expansion
 {
 
-unsigned long long round_to_power_of_two(unsigned long long num)
+constexpr unsigned long long round_to_power_of_two(unsigned long long num)
 {
     if (!num)
     {

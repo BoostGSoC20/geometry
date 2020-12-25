@@ -108,6 +108,7 @@ using make_det =
 template <typename ...Exps>
 struct det_impl
 {
+private:
     static constexpr std::size_t N = sizet_sqrt(sizeof...(Exps));
     static_assert(N * N == sizeof...(Exps),
                   "Arguments must be a square matrix.");
@@ -137,6 +138,7 @@ struct det_impl
             minor_factors,
             minor_dets
         >;
+public:
     using type = boost::mp11::mp_apply
         <
             alternating_sum,
@@ -299,6 +301,59 @@ using orient2d = orient<2>;
 using orient3d = orient<3>;
 using incircle = innsphere<2>;
 using insphere = innsphere<3>;
+
+struct orient2d_no_translation_impl
+{
+private:
+    using adet = det
+        <
+            argument<3>, argument<4>,
+            argument<5>, argument<6>
+        >;
+    using bdet = det
+        <
+            argument<1>, argument<2>,
+            argument<5>, argument<6>
+        >;
+    using cdet = det
+        <
+            argument<1>, argument<2>,
+            argument<3>, argument<4>
+        >;
+public:
+    using type = sum< difference<adet, bdet>, cdet >;
+};
+
+using orient2d_no_translation = orient2d_no_translation_impl::type;
+
+struct incircle_no_translation_impl
+{
+private:
+    using alift = sum< product<argument<1>, argument<1>>,
+                       product<argument<2>, argument<2>> >;
+    using blift = sum< product<argument<3>, argument<3>>,
+                       product<argument<4>, argument<4>> >;
+    using clift = sum< product<argument<5>, argument<5>>,
+                       product<argument<6>, argument<6>> >;
+    using dlift = sum< product<argument<7>, argument<7>>,
+                       product<argument<8>, argument<8>> >;
+    using adet = det < argument<3>, argument<4>, blift,
+                       argument<5>, argument<6>, clift,
+                       argument<7>, argument<8>, dlift >;
+    using bdet = det < argument<1>, argument<2>, alift,
+                       argument<5>, argument<6>, clift,
+                       argument<7>, argument<8>, dlift >;
+    using cdet = det < argument<1>, argument<2>, alift,
+                       argument<3>, argument<4>, blift,
+                       argument<7>, argument<8>, dlift >;
+    using ddet = det < argument<1>, argument<2>, alift,
+                       argument<3>, argument<4>, blift,
+                       argument<5>, argument<6>, clift >;
+public:
+    using type = sum < difference<bdet, adet>, difference<ddet, cdet> >;
+};
+
+using incircle_no_translation = incircle_no_translation_impl::type;
 
 }} // namespace detail::generic_robust_predicates
 

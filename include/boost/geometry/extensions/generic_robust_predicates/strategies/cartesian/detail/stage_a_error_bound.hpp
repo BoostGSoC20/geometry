@@ -67,11 +67,7 @@ constexpr std::array<int, 3> coeff_max(const std::array<int, 3> a, const std::ar
            a[0] > b[0]
         || (a[0] == b[0] && a[1] > b[1])
         || (a[0] == b[0] && a[1] == b[1] && a[2] > b[2]);
-    return a_bigger ? a : b/*std::array<int, 3> {
-            a_bigger ? a[0] : b[0],
-            a_bigger ? a[1] : b[1],
-            a_bigger ? a[2] : b[2]
-        }*/;
+    return a_bigger ? a : b;
 }
 
 constexpr std::array<int, 3> coeff_product(const std::array<int, 3> a, const std::array<int, 3> b)
