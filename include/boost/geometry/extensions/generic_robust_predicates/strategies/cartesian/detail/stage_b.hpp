@@ -73,6 +73,7 @@ struct all_differences_zero_tail
             {{ static_cast<Real>(args)... }};
         Real left_val = input[left::argn - 1];
         Real right_val = input[right::argn - 1];
+        *(begin + start) = left_val - right_val;
         using eval_index = boost::mp11::mp_find<Evals, eval>;
         constexpr std::size_t start =
             boost::mp11::mp_at<AccumulatedSizes, eval_index>::value;
@@ -153,18 +154,6 @@ struct stage_b
         using leaf_differences =
             boost::mp11::mp_copy_if<evals, is_leaf_difference>;
 
-        auto most_significant = eval_expansions
-            <
-                evals,
-                sizes,
-                accumulated_sizes,
-                decltype(results.begin()),
-                Real,
-                true,
-                ZEPolicy,
-                FEPolicy
-            >(results.begin(), results.end(), args...) - 1;
-
         bool all_zero = all_differences_zero_tail
                 <
                     evals,
@@ -172,11 +161,27 @@ struct stage_b
                     accumulated_sizes,
                     typename result_array::iterator,
                     Real
-                >::apply(results.begin(), results.end(), args...);
+        >::apply(results.begin(), results.end(), args...);
+
         if( !all_zero )
         {
             return sign_uncertain;
         }
+
+        using remainder = typename boost::mp11::mp_remove_if<eval, is_leaf_difference>;
+
+        auto most_significant = eval_expansions_impl
+            <
+                evals,
+                remainder,
+                sizes,
+                accumulated_sizes,
+                decltype(results.begin()),
+                Real,
+                true,
+                ZEPolicy,
+                FEPolicy
+            >::apply(results.begin(), results.end(), args...) - 1;
 
         if( *most_significant == 0)
         {
