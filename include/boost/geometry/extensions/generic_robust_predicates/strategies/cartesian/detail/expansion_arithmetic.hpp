@@ -1362,6 +1362,7 @@ template
     bool inplace,
     template<int> class ze = default_zero_elimination_policy,
     template<int, int> class = default_fast_expansion_sum_policy,
+    bool LeftEqualsRight,
     typename InIter,
     typename Real,
     typename OutIter,
@@ -1384,6 +1385,7 @@ template
     bool inplace,
     template<int> class ze = default_zero_elimination_policy,
     template<int, int> class = default_fast_expansion_sum_policy,
+    bool LeftEqualsRight,
     typename InIter,
     typename Real,
     typename OutIter,
@@ -1407,6 +1409,7 @@ template
     bool inplace,
     template<int> class ze = default_zero_elimination_policy,
     template<int, int> class = default_fast_expansion_sum_policy,
+    bool LeftEqualsRight,
     typename Real,
     typename OutIter,
     int result = expansion_product_length(e_length, f_length)
@@ -1432,6 +1435,7 @@ template
     bool,
     template<int> class = default_zero_elimination_policy,
     template<int, int> class = default_fast_expansion_sum_policy,
+    bool LeftEqualsRight,
     typename In1,
     typename In2,
     typename Out,
@@ -1447,6 +1451,7 @@ template
         default_zero_elimination_policy,
     template<int, int> class FastExpansionSumPolicy =
         default_fast_expansion_sum_policy,
+    bool LeftEqualsRight = false,
     int result = expansion_product_length(e_length, f_length),
     typename e_smaller = boost::mp11::mp_bool<e_length <= f_length>
 >
@@ -1472,7 +1477,9 @@ struct expansion_times_impl
                     1,
                     f_length,
                     false,
-                    ZeroEliminationPolicy
+                    ZeroEliminationPolicy,
+                    FastExpansionSumPolicy,
+                    LeftEqualsRight
                 >(*e_begin, f_begin, f_end, h_begin, h_end);
             assert(debug_expansion::expansion_nonoverlapping(h_begin, h_it));
             return h_it;
@@ -1487,7 +1494,9 @@ struct expansion_times_impl
                     e_length1,
                     f_length,
                     false,
-                    ZeroEliminationPolicy
+                    ZeroEliminationPolicy,
+                    FastExpansionSumPolicy,
+                    LeftEqualsRight
                 >(e_begin, e_mid, f_begin, f_end, h_begin, h_mid);
             constexpr int e_length2 = e_length == -1 ? -1 : e_length - e_length1;
             h_end = expansion_times
@@ -1495,7 +1504,9 @@ struct expansion_times_impl
                     e_length2,
                     f_length,
                     false,
-                    ZeroEliminationPolicy
+                    ZeroEliminationPolicy,
+                    FastExpansionSumPolicy,
+                    LeftEqualsRight
                 >(e_mid, e_end, f_begin, f_end, h_mid, h_end);
 
             constexpr int summand_length1 =
@@ -1528,9 +1539,19 @@ template
     int f_length,
     template<int> class ze,
     template<int, int> class fe,
+    bool LeftEqualsRight,
     int result
 >
-struct expansion_times_impl<e_length, f_length, ze, fe, result, boost::mp11::mp_false>
+struct expansion_times_impl
+    <
+        e_length,
+        f_length,
+        ze,
+        fe,
+        LeftEqualsRight,
+        result,
+        boost::mp11::mp_false
+    >
 {
     template<typename InIter1, typename InIter2, typename OutIter>
     static constexpr OutIter apply(InIter1 e_begin,
@@ -1540,7 +1561,7 @@ struct expansion_times_impl<e_length, f_length, ze, fe, result, boost::mp11::mp_
                                    OutIter h_begin,
                                    OutIter h_end)
     {
-        return expansion_times_impl<f_length, e_length, ze, fe>
+        return expansion_times_impl<f_length, e_length, ze, fe, LeftEqualsRight>
             ::apply(f_begin,
                     f_end,
                     e_begin,
@@ -1550,8 +1571,8 @@ struct expansion_times_impl<e_length, f_length, ze, fe, result, boost::mp11::mp_
     }
 };
 
-template<template<int> class ze, template<int, int> class fe>
-struct expansion_times_impl<1, 1, ze, fe, 2>
+template<template<int> class ze, template<int, int> class fe, bool LeftEqualsRight>
+struct expansion_times_impl<1, 1, ze, fe, LeftEqualsRight, 2>
 {
     template<typename InIter1, typename InIter2, typename OutIter>
     static constexpr OutIter apply(InIter1 e_begin,
@@ -1577,6 +1598,7 @@ template
     bool inplace,
     template<int> class ze,
     template<int, int> class fe,
+    bool LeftEqualsRight,
     typename InIter1,
     typename InIter2,
     typename OutIter,
@@ -1589,7 +1611,7 @@ constexpr OutIter expansion_times(InIter1 e_begin,
                                   OutIter h_begin,
                                   OutIter h_end)
 {
-    return expansion_times_impl<e_length, f_length, ze, fe, result>::
+    return expansion_times_impl<e_length, f_length, ze, fe, LeftEqualsRight, result>::
         apply(e_begin, e_end, f_begin, f_end, h_begin, h_end);
 }
 

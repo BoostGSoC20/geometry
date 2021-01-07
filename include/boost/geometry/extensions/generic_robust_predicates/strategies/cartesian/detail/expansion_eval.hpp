@@ -98,7 +98,8 @@ template
     typename Iter,
     template <int> class ZEPolicy,
     template <int, int> class FEPolicy,
-    bool StageB = false
+    bool StageB = false,
+    bool LeftEqualsRight = false
 >
 struct perform_op_impl {};
 
@@ -110,7 +111,8 @@ template
     typename Iter,
     template <int> class ZEPolicy,
     template <int, int> class FEPolicy,
-    bool StageB
+    bool StageB,
+    bool LeftEqualsRight
 >
 struct perform_op_impl
     <
@@ -121,7 +123,8 @@ struct perform_op_impl
         Iter,
         ZEPolicy,
         FEPolicy,
-        StageB
+        StageB,
+        LeftEqualsRight
     >
 {
     template<typename ...Args>
@@ -145,7 +148,8 @@ template
     typename Iter,
     template <int> class ZEPolicy,
     template <int, int> class FEPolicy,
-    bool StageB
+    bool StageB,
+    bool LeftEqualsRight
 >
 struct perform_op_impl
     <
@@ -156,7 +160,8 @@ struct perform_op_impl
         Iter,
         ZEPolicy,
         FEPolicy,
-        StageB
+        StageB,
+        LeftEqualsRight
     >
 {
     template<typename ...Args>
@@ -182,7 +187,8 @@ template
     typename Iter,
     template <int> class ZEPolicy,
     template <int, int> class FEPolicy,
-    bool StageB
+    bool StageB,
+    bool LeftEqualsRight
 >
 struct perform_op_impl
     <
@@ -193,7 +199,8 @@ struct perform_op_impl
         Iter,
         ZEPolicy,
         FEPolicy,
-        StageB
+        StageB,
+        LeftEqualsRight
     >
 {
     template<typename ...Args>
@@ -204,7 +211,9 @@ struct perform_op_impl
                 LeftLength,
                 RightLength,
                 Inplace,
-                ZEPolicy
+                ZEPolicy,
+                FEPolicy,
+                LeftEqualsRight
             >(args...);
     }
 };
@@ -223,7 +232,8 @@ template
     bool StageB = false,
     operator_types Op = Eval::operator_type,
     bool LeftLeaf = Eval::left::is_leaf,
-    bool RightLeaf = Eval::right::is_leaf
+    bool RightLeaf = Eval::right::is_leaf,
+    bool LeftEqualsRight = false
 >
 struct eval_expansion_impl {};
 
@@ -256,7 +266,8 @@ template
     template <int> class ZEPolicy,
     template <int, int> class FEPolicy,
     bool StageB,
-    operator_types Op
+    operator_types Op,
+    bool LeftEqualsRight
 >
 struct eval_expansion_impl
     <
@@ -272,7 +283,8 @@ struct eval_expansion_impl
         StageB,
         Op,
         true,
-        true
+        true,
+        LeftEqualsRight
     >
 {
 private:
@@ -291,7 +303,7 @@ public:
             {{ static_cast<Real>(args)... }};
         Real left_val = input[left::argn - 1];
         Real right_val = input[right::argn - 1];
-        auto end = perform_op_impl<Op, 1, 1, false, Iter, ZEPolicy, FEPolicy, StageB>
+        auto end = perform_op_impl<Op, 1, 1, false, Iter, ZEPolicy, FEPolicy, StageB, LeftEqualsRight>
             ::apply(left_val, right_val, begin + start, begin + start + size);
         set_exp_end
             <
@@ -334,7 +346,8 @@ template
     template <int> class ZEPolicy,
     template <int, int> class FEPolicy,
     bool StageB,
-    operator_types Op
+    operator_types Op,
+    bool LeftEqualsRight
 >
 struct eval_expansion_impl
     <
@@ -350,7 +363,8 @@ struct eval_expansion_impl
         StageB,
         Op,
         true,
-        false
+        false,
+        LeftEqualsRight
     >
 {
 private:
@@ -379,7 +393,18 @@ public:
                     ZEPolicy<right_size>::value,
                     boost::mp11::mp_find<ZEEvals, right>::value
                 >::apply(begin + right_start + right_size, ze_ends);
-        Iter end = perform_op_impl<Op, 1, right_size, false, Iter, ZEPolicy, FEPolicy, StageB>::apply(
+        Iter end = perform_op_impl
+            <
+                Op,
+                1,
+                right_size,
+                false,
+                Iter,
+                ZEPolicy,
+                FEPolicy,
+                StageB,
+                LeftEqualsRight
+            >::apply(
             left_val,
             begin + right_start,
             right_end,
@@ -407,7 +432,8 @@ template
     template <int> class ZEPolicy,
     template <int, int> class FEPolicy,
     bool StageB,
-    operator_types Op
+    operator_types Op,
+    bool LeftEqualsRight
 >
 struct eval_expansion_impl
     <
@@ -423,7 +449,8 @@ struct eval_expansion_impl
         StageB,
         Op,
         false,
-        true
+        true,
+        LeftEqualsRight
     >
 {
 private:
@@ -452,7 +479,18 @@ public:
                     ZEPolicy<left_size>::value,
                     boost::mp11::mp_find<ZEEvals, left>::value
                 >::apply(begin + left_start + left_size, ze_ends);
-        auto end = perform_op_impl<Op, left_size, 1, false, Iter, ZEPolicy, FEPolicy, StageB>::apply(
+        auto end = perform_op_impl
+            <
+                Op,
+                left_size,
+                1,
+                false,
+                Iter,
+                ZEPolicy,
+                FEPolicy,
+                StageB,
+                LeftEqualsRight
+            >::apply(
             begin + left_start,
             left_end,
             right_val,
@@ -480,7 +518,8 @@ template
     template <int> class ZEPolicy,
     template <int, int> class FEPolicy,
     bool StageB,
-    operator_types Op
+    operator_types Op,
+    bool LeftEqualsRight
 >
 struct eval_expansion_impl
     <
@@ -496,7 +535,8 @@ struct eval_expansion_impl
         StageB,
         Op,
         false,
-        false
+        false,
+        LeftEqualsRight
     >
 {
 private:
@@ -545,7 +585,8 @@ public:
                 Iter,
                 ZEPolicy,
                 FEPolicy,
-                StageB
+                StageB,
+                LeftEqualsRight
             >::apply(
                 begin + left_start,
                 left_end,
@@ -582,10 +623,11 @@ struct eval_expansions_impl
     template<typename IterArr, typename ...Reals>
     static constexpr Iter apply(Iter begin, Iter end, IterArr& ze_ends, const Reals&... args)
     {
+        using eval = boost::mp11::mp_front<RemainingEvals>;
         eval_expansion_impl
             <
                 Evals,
-                boost::mp11::mp_front<RemainingEvals>,
+                eval,
                 Sizes,
                 AccumulatedSizes,
                 ZEEvals,
@@ -593,7 +635,11 @@ struct eval_expansions_impl
                 Real,
                 ZEPolicy,
                 FEPolicy,
-                StageB
+                StageB,
+                eval::operator_type,
+                eval::left::is_leaf,
+                eval::right::is_leaf,
+                std::is_same<typename eval::left, typename eval::right>::value
             >::apply(begin, end, ze_ends, args...);
         return eval_expansions_impl
             <
@@ -645,10 +691,12 @@ struct eval_expansions_impl
     template<typename IterArr, typename ...Reals>
     static constexpr Iter apply(Iter begin, Iter end, IterArr& ze_ends, const Reals&... args)
     {
+        using eval = boost::mp11::mp_front<RemainingEvals>;
+
         auto new_end = eval_expansion_impl
             <
                 Evals,
-                boost::mp11::mp_front<RemainingEvals>,
+                eval,
                 Sizes,
                 AccumulatedSizes,
                 ZEEvals,
@@ -656,7 +704,11 @@ struct eval_expansions_impl
                 Real,
                 force_zero_elimination_policy,
                 FEPolicy,
-                StageB
+                StageB,
+                eval::operator_type,
+                eval::left::is_leaf,
+                eval::right::is_leaf,
+                std::is_same<typename eval::left, typename eval::right>::value
             >::apply(begin, end, ze_ends, args...);
         return new_end;
     }
