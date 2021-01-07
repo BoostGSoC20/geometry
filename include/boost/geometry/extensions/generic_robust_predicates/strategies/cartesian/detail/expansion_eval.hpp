@@ -78,7 +78,14 @@ private:
     static constexpr std::size_t right_size =
         expansion_size_impl<typename Expression::right, StageB>::value;
 public:
-    static constexpr std::size_t value = 2 * left_size * right_size;
+    static constexpr std::size_t value =
+        std::is_same
+            <
+                typename Expression::left,
+                typename Expression::right
+            >::value && left_size == 2 && right_size == 2 ?
+              6
+            : 2 * left_size * right_size;
 };
 
 template <typename Expression> using expansion_size =

@@ -933,9 +933,17 @@ constexpr int expansion_sum_length(int s1, int s2)
     return s1 != -1 && s2 != -1 ? s1 + s2 : -1;
 }
 
-constexpr int expansion_product_length(int s1, int s2)
+constexpr int expansion_product_length(int s1, int s2, bool same = false)
 {
-    return s1 != -1 && s2 != -1 ? 2 * s1 * s2 : -1;
+    if(s1 == -1 || s2 == -1)
+    {
+        return -1;
+    }
+    else if(same && s1 == 2 && s2 == 2)
+    {
+        return 6;
+    }
+    return 2 * s1 * s2;
 }
 
 template <int Length>
@@ -1366,7 +1374,7 @@ template
     typename InIter,
     typename Real,
     typename OutIter,
-    int result = expansion_product_length(e_length, f_length)
+    int result = expansion_product_length(e_length, f_length, LeftEqualsRight)
 >
 constexpr OutIter expansion_times(InIter e_begin,
                                   InIter e_end,
@@ -1389,7 +1397,7 @@ template
     typename InIter,
     typename Real,
     typename OutIter,
-    int result = expansion_product_length(e_length, f_length)
+    int result = expansion_product_length(e_length, f_length, LeftEqualsRight)
 >
 constexpr OutIter expansion_times(Real e,
                                   InIter f_begin,
@@ -1412,7 +1420,7 @@ template
     bool LeftEqualsRight,
     typename Real,
     typename OutIter,
-    int result = expansion_product_length(e_length, f_length)
+    int result = expansion_product_length(e_length, f_length, LeftEqualsRight)
 >
 constexpr OutIter expansion_times(Real e,
                                   Real f,
@@ -1439,7 +1447,7 @@ template
     typename In1,
     typename In2,
     typename Out,
-    int = expansion_product_length(e_length, f_length)
+    int = expansion_product_length(e_length, f_length, LeftEqualsRight)
 >
 constexpr Out expansion_times(In1, In1, In2, In2, Out, Out);
 
@@ -1452,7 +1460,7 @@ template
     template<int, int> class FastExpansionSumPolicy =
         default_fast_expansion_sum_policy,
     bool LeftEqualsRight = false,
-    int result = expansion_product_length(e_length, f_length),
+    int result = expansion_product_length(e_length, f_length, LeftEqualsRight),
     typename e_smaller = boost::mp11::mp_bool<e_length <= f_length>
 >
 struct expansion_times_impl
@@ -1510,9 +1518,9 @@ struct expansion_times_impl
                 >(e_mid, e_end, f_begin, f_end, h_mid, h_end);
 
             constexpr int summand_length1 =
-                expansion_product_length(e_length1, f_length);
+                expansion_product_length(e_length1, f_length, false);
             constexpr int summand_length2 =
-                expansion_product_length(e_length2, f_length);
+                expansion_product_length(e_length2, f_length, false);
             OutIter h_it = expansion_plus
                 <
                     summand_length1,
@@ -1532,6 +1540,157 @@ struct expansion_times_impl
         return h_begin;
     }
 };
+
+/*
+template
+<
+    int e_length,
+    int f_length,
+    bool inplace,
+    template<int> class ze = default_zero_elimination_policy,
+    template<int, int> class = default_fast_expansion_sum_policy,
+    typename InIter,
+    typename Real,
+    typename OutIter,
+    int result = expansion_sum_length(e_length, f_length)
+>
+constexpr OutIter expansion_plus(InIter e_begin,
+                                 InIter e_end,
+                                 Real f,
+                                 OutIter h_begin,
+                                 OutIter h_end)
+
+ * */
+
+template
+<
+    bool ZeroElimination
+>
+struct advance_ze_impl
+{
+    template <typename Iter>
+    Iter apply(Iter it)
+    {
+        return *it == 0 ? it : it + 1;
+    }
+};
+
+template <>
+struct advance_ze_impl<false>
+{
+    template <typename Iter>
+    Iter apply(Iter it)
+    {
+        return it + 1;
+    }
+};
+
+template <bool B>
+struct constant_ze
+{
+    template <int>
+    using fn = boost::mp11::mp_bool<B>;
+};
+
+template
+<
+    bool ze,
+    bool EZeroEliminated
+>
+struct two_square_impl
+{
+    template <typename InIter, typename OutIter>
+    static constexpr OutIter apply(InIter e_begin,
+                                   InIter e_end,
+                                   OutIter h_begin,
+                                   OutIter h_end)
+    {
+        std::array<std::remove_reference_t<decltype(*h_begin)>, 5> cache;
+        cache[2] = *(e_begin) * *(e_begin);
+        auto h_it = h_begin;
+        h_it = insert_ze<ze>(h_it,
+                             two_product_tail(*e_begin, *e_begin, cache[2]));
+        cache[1] = *(e_begin + 1) * 2.0 * *(e_begin);
+        cache[0] = two_product_tail(*(e_begin + 1), 2.0 * *(e_begin), cache[1]);
+        expansion_plus<2, 1, false>(cache.cbegin(),
+                                    cache.cbegin() + 2,
+                                    cache[2],
+                                    cache.begin() + 2,
+                                    cache.begin() + 5);
+        h_it = insert_ze<ze>(h_it, cache[2]);
+        cache[1] = *(e_begin + 1) * *(e_begin + 1);
+        cache[0] = two_product_tail(*(e_begin + 1), *(e_begin + 1), cache[1]);
+        h_it = expansion_plus
+            <
+                2,
+                2,
+                false,
+                constant_ze<ze>::template fn
+            >(cache.cbegin(),
+              cache.cbegin() + 2,
+              cache.cbegin() + 3,
+              cache.cbegin() + 5,
+              h_it,
+              h_it + 4);
+        return h_it;
+    }
+};
+
+template <>
+struct two_square_impl<true, true>
+{
+    template <typename InIter, typename OutIter>
+    static constexpr OutIter apply(InIter e_begin,
+                                   InIter e_end,
+                                   OutIter h_begin,
+                                   OutIter h_end)
+    {
+        if(e_begin + 1 == e_end)
+        {
+            *(h_begin + 1) = *e_begin * *e_begin;
+            *h_begin = two_product_tail(*e_begin, *e_begin, *(h_begin + 1));
+            return h_begin + 2;
+        }
+        else
+        {
+            return two_square_impl<true, false>
+                ::apply(e_begin, e_end, h_begin, h_end);
+        }
+    }
+};
+
+template
+<
+    template<int> class ZE,
+    template<int, int> class FE
+>
+struct expansion_times_impl
+    <
+        2,
+        2,
+        ZE,
+        FE,
+        true,
+        6,
+        boost::mp11::mp_true
+    >
+{
+    template<typename InIter1, typename InIter2, typename OutIter>
+    static constexpr OutIter apply(InIter1 e_begin,
+                                   InIter1 e_end,
+                                   InIter2,
+                                   InIter2,
+                                   OutIter h_begin,
+                                   OutIter h_end)
+    {
+        return two_square_impl
+            <
+                ZE<6>::value,
+                ZE<2>::value
+            >::apply(e_begin, e_end, h_begin, h_end);
+    }
+};
+
 
 template
 <
