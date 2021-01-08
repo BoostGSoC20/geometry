@@ -47,7 +47,25 @@ struct stage_d
     {
         using stack = typename boost::mp11::mp_unique<post_order<Expression>>;
         using evals = typename boost::mp11::mp_remove_if<stack, is_leaf>;
-        using sizes = boost::mp11::mp_transform<expansion_size, evals>;
+        using sizes_pre = boost::mp11::mp_transform
+            <
+                expansion_size,
+                boost::mp11::mp_pop_back<evals>
+            >;
+        using sizes = boost::mp11::mp_push_back
+            <
+                sizes_pre,
+                boost::mp11::mp_size_t
+                    <
+                        final_expansion_size
+                            <
+                                Expression,
+                                expansion_size<typename Expression::left>::value,
+                                expansion_size<typename Expression::right>::value,
+                                FEPolicy
+                            >()
+                    >
+            >;
         using accumulated_sizes = boost::mp11::mp_push_front
             <
                 boost::mp11::mp_partial_sum

@@ -298,7 +298,8 @@ constexpr Real two_product_tail_constexpr(Real a, Real b, Real x)
 
 template
 <
-    bool zero_elimination,
+    bool ZeroElimination,
+    bool MostSigOnly,
     typename OutIter,
     typename Real
 >
@@ -324,7 +325,38 @@ template
     typename OutIter,
     typename Real
 >
-struct insert_ze_impl<false, OutIter, Real>
+struct insert_ze_impl<false, true, OutIter, Real>
+{
+    static constexpr OutIter apply(OutIter out, Real val)
+    {
+        *out += val;
+        return out;
+    }
+};
+
+template
+<
+    typename OutIter,
+    typename Real
+>
+struct insert_ze_impl<true, true, OutIter, Real>
+{
+    static constexpr OutIter apply(OutIter out, Real val)
+    {
+        if(val != 0)
+        {
+            *out = val;
+        }
+        return out;
+    }
+};
+
+template
+<
+    typename OutIter,
+    typename Real
+>
+struct insert_ze_impl<false, false, OutIter, Real>
 {
     static constexpr OutIter apply(OutIter out, Real val)
     {
@@ -336,18 +368,20 @@ struct insert_ze_impl<false, OutIter, Real>
 
 template
 <
-    bool zero_elimination,
+    bool ZeroElimination,
+    bool MostSigOnly = false,
     typename OutIter,
     typename Real
 >
 constexpr OutIter insert_ze(OutIter o, Real r)
 {
-    return insert_ze_impl<zero_elimination, OutIter, Real>::apply(o, r);
+    return insert_ze_impl<ZeroElimination, MostSigOnly, OutIter, Real>::apply(o, r);
 }
 
 template
 <
-    bool zero_elimination,
+    bool ZeroElimination,
+    bool MostSigOnly,
     typename OutIter,
     typename Real
 >
@@ -373,7 +407,40 @@ template
     typename OutIter,
     typename Real
 >
-struct insert_ze_final_impl<false, OutIter, Real>
+struct insert_ze_final_impl<false, true, OutIter, Real>
+{
+    static constexpr OutIter apply(OutIter out, OutIter, Real val)
+    {
+        *out += val;
+        ++out;
+        return out;
+    }
+};
+
+template
+<
+    typename OutIter,
+    typename Real
+>
+struct insert_ze_final_impl<true, true, OutIter, Real>
+{
+    static constexpr OutIter apply(OutIter out, OutIter, Real val)
+    {
+        if(val != 0)
+        {
+            *out = val;
+        }
+        ++out;
+        return out;
+    }
+};
+
+template
+<
+    typename OutIter,
+    typename Real
+>
+struct insert_ze_final_impl<false, false, OutIter, Real>
 {
     static constexpr OutIter apply(OutIter out, OutIter, Real val)
     {
@@ -385,18 +452,20 @@ struct insert_ze_final_impl<false, OutIter, Real>
 
 template
 <
-    bool zero_elimination,
+    bool ZeroElimination,
+    bool MostSigOnly = false,
     typename OutIter,
     typename Real
 >
 constexpr OutIter insert_ze_final(OutIter o, OutIter s, Real r)
 {
-    return insert_ze_final_impl<zero_elimination, OutIter, Real>::apply(o, s, r);
+    return insert_ze_final_impl<ZeroElimination, MostSigOnly, OutIter, Real>::apply(o, s, r);
 }
 
 template
 <
-    bool zero_elimination,
+    bool ZeroElimination,
+    bool MostSigOnly = false,
     typename InIter,
     typename OutIter,
     typename Real,
@@ -417,37 +486,13 @@ constexpr OutIter grow_expansion(InIter e_begin,
         Real Q_new = negate<NegateE>(*e_it) + Q;
         Real h_new = two_sum_tail(negate<NegateE>(*e_it), Q, Q_new);
         Q = Q_new;
-        h_it = insert_ze<zero_elimination>(h_it, h_new);
+        h_it = insert_ze<ZeroElimination>(h_it, h_new);
     }
-    h_it = insert_ze_final<zero_elimination>(h_it, h_begin, Q);
+    h_it = insert_ze_final<ZeroElimination>(h_it, h_begin, Q);
     assert(debug_expansion::expansion_nonoverlapping(h_begin, h_it));
     assert(  !debug_expansion::expansion_nonadjacent(e_begin, e_end)
            || debug_expansion::expansion_nonadjacent(h_begin, h_it) );
     return h_it;
-}
-
-template
-<
-    bool zero_elimination,
-    typename InIter,
-    typename OutIter,
-    typename Real
->
-constexpr OutIter grow_expansion_difference(InIter e_begin,
-                                            InIter e_end,
-                                            Real b,
-                                            OutIter h_begin,
-                                            OutIter h_end)
-{
-    return grow_expansion
-        <
-            zero_elimination,
-            InIter,
-            OutIter,
-            Real,
-            false,
-            true
-        >(e_begin, e_end, b, h_begin, h_end);
 }
 
 template <bool zero_elimination, bool NegateE, bool NegateB>
@@ -481,7 +526,8 @@ constexpr bool expansion_sum_advance(Real e, Real b)
 
 template
 <
-    bool zero_elimination,
+    bool ZeroElimination,
+    bool MostSigOnly = false,
     typename InIter1,
     typename InIter2,
     typename OutIter,
@@ -503,11 +549,12 @@ constexpr OutIter expansion_sum(InIter1 e_begin,
     auto f_it = f_begin;
     auto h_begin_i = h_begin;
     bool advance =
-        expansion_sum_advance<zero_elimination, NegateE, NegateF>(*e_begin,
-                                                                  *f_it);
+        expansion_sum_advance<ZeroElimination, NegateE, NegateF>(*e_begin,
+                                                                 *f_it);
     auto h_it = grow_expansion
         <
-            zero_elimination,
+            ZeroElimination,
+            false,
             InIter1,
             OutIter,
             Real,
@@ -522,11 +569,12 @@ constexpr OutIter expansion_sum(InIter1 e_begin,
     for(auto i = 1; i < flen; ++i)
     {
         advance =
-            expansion_sum_advance<zero_elimination, false, NegateF>(*h_begin_i,
+            expansion_sum_advance<ZeroElimination, false, NegateF>(*h_begin_i,
                                                                     *f_it);
         h_it = grow_expansion
             <
-                zero_elimination,
+                ZeroElimination,
+                false,
                 InIter1,
                 OutIter,
                 Real,
@@ -552,32 +600,8 @@ constexpr OutIter expansion_sum(InIter1 e_begin,
 
 template
 <
-    bool zero_elimination,
-    typename InIter1,
-    typename InIter2,
-    typename OutIter
->
-constexpr OutIter expansion_difference(InIter1 e_begin,
-                                       InIter1 e_end,
-                                       InIter2 f_begin,
-                                       InIter2 f_end,
-                                       OutIter h_begin,
-                                       OutIter h_end)
-{
-    return expansion_sum
-        <
-            zero_elimination,
-            InIter1,
-            InIter2,
-            OutIter,
-            false,
-            true
-        >(e_begin, e_end, f_begin, f_end, h_begin, h_end);
-}
-
-template
-<
-    bool zero_elimination,
+    bool ZeroElimination,
+    bool MostSigOnly = false,
     typename InIter1,
     typename InIter2,
     typename OutIter,
@@ -629,7 +653,7 @@ constexpr OutIter fast_expansion_sum_inplace(InIter1 e_begin,
     {
         f_end = std::remove(f_begin, f_end, Real(0));
     }
-    if(!zero_elimination)
+    if(!ZeroElimination)
     {
         std::fill(f_end, f_old_end, Real(0));
     }
@@ -641,19 +665,19 @@ constexpr OutIter fast_expansion_sum_inplace(InIter1 e_begin,
     OutIter h_it = h_begin;
     Real Q = *g_it + *(g_it + 1);
     Real h_new = fast_two_sum_tail(*(g_it + 1), *(g_it), Q);
-    h_it = insert_ze<zero_elimination>(h_it, h_new);
+    h_it = insert_ze<ZeroElimination, MostSigOnly>(h_it, h_new);
     g_it += 2;
     for(; g_it < g_end; ++g_it)
     {
         Real Q_new = Q + *g_it;
         h_new = two_sum_tail(Q, *g_it, Q_new);
-        h_it = insert_ze<zero_elimination>(h_it, h_new);
+        h_it = insert_ze<ZeroElimination, MostSigOnly>(h_it, h_new);
         Q = Q_new;
     }
-    h_it = insert_ze_final<zero_elimination>(h_it, h_begin, Q);
+    h_it = insert_ze_final<ZeroElimination, MostSigOnly>(h_it, h_begin, Q);
 
     assert(debug_expansion::expansion_nonoverlapping(h_begin, h_it));
-    if( !zero_elimination )
+    if( !ZeroElimination )
     {
         h_it = h_end;
     }
@@ -662,7 +686,8 @@ constexpr OutIter fast_expansion_sum_inplace(InIter1 e_begin,
 
 template
 <
-    bool zero_elimination,
+    bool ZeroElimination,
+    bool MostSigOnly = false,
     typename InIter1,
     typename InIter2,
     typename OutIter,
@@ -713,7 +738,7 @@ constexpr OutIter fast_expansion_sum_not_inplace(InIter1 e_begin,
             ++f_it;
         }
         Q = Q_new;
-        h_it = insert_ze<zero_elimination>(h_it, h_new);
+        h_it = insert_ze<ZeroElimination, MostSigOnly>(h_it, h_new);
         while((e_it != e_end) && (f_it != f_end))
         {
             if (std::abs(*f_it) > std::abs(*e_it))
@@ -729,14 +754,14 @@ constexpr OutIter fast_expansion_sum_not_inplace(InIter1 e_begin,
                 ++f_it;
             }
             Q = Q_new;
-            h_it = insert_ze<zero_elimination>(h_it, h_new);
+            h_it = insert_ze<ZeroElimination, MostSigOnly>(h_it, h_new);
         }
     }
     while(e_it != e_end)
     {
         Real Q_new = negate<NegateE>(*e_it) + Q;
         Real h_new = two_sum_tail(negate<NegateE>(*e_it), Q, Q_new);
-        h_it = insert_ze<zero_elimination>(h_it, h_new);
+        h_it = insert_ze<ZeroElimination, MostSigOnly>(h_it, h_new);
         Q = Q_new;
         ++e_it;
     }
@@ -744,18 +769,19 @@ constexpr OutIter fast_expansion_sum_not_inplace(InIter1 e_begin,
     {
         Real Q_new = negate<NegateF>(*f_it) + Q;
         Real h_new = two_sum_tail(negate<NegateF>(*f_it), Q, Q_new);
-        h_it = insert_ze<zero_elimination>(h_it, h_new);
+        h_it = insert_ze<ZeroElimination, MostSigOnly>(h_it, h_new);
         Q = Q_new;
         ++f_it;
     }
-    h_it = insert_ze_final<zero_elimination>(h_it, h_begin, Q);
+    h_it = insert_ze_final<ZeroElimination, MostSigOnly>(h_it, h_begin, Q);
     assert(debug_expansion::expansion_nonoverlapping(h_begin, h_it));
     return h_it;
 }
 
 template
 <
-    bool zero_elimination,
+    bool ZeroElimination,
+    bool MostSigOnly,
     typename InIter1,
     typename InIter2,
     typename OutIter,
@@ -774,7 +800,8 @@ struct fast_expansion_sum_impl
     {
         return fast_expansion_sum_not_inplace
             <
-                zero_elimination,
+                ZeroElimination,
+                MostSigOnly,
                 InIter1,
                 InIter2,
                 OutIter,
@@ -786,7 +813,8 @@ struct fast_expansion_sum_impl
 
 template
 <
-    bool zero_elimination,
+    bool ZeroElimination,
+    bool MostSigOnly,
     typename InIter1,
     typename InIter2,
     typename OutIter,
@@ -795,7 +823,8 @@ template
 >
 struct fast_expansion_sum_impl
     <
-        zero_elimination,
+        ZeroElimination,
+        MostSigOnly,
         InIter1,
         InIter2,
         OutIter,
@@ -813,7 +842,8 @@ struct fast_expansion_sum_impl
     {
         return fast_expansion_sum_inplace
             <
-                zero_elimination,
+                ZeroElimination,
+                MostSigOnly,
                 InIter1,
                 InIter2,
                 OutIter,
@@ -825,7 +855,8 @@ struct fast_expansion_sum_impl
 
 template
 <
-    bool zero_elimination,
+    bool ZeroElimination,
+    bool MostSigOnly = false,
     typename InIter1,
     typename InIter2,
     typename OutIter,
@@ -842,7 +873,8 @@ constexpr OutIter fast_expansion_sum(InIter1 e_begin,
 {
     return fast_expansion_sum_impl
         <
-            zero_elimination,
+            ZeroElimination,
+            MostSigOnly,
             InIter1,
             InIter2,
             OutIter,
@@ -850,33 +882,6 @@ constexpr OutIter fast_expansion_sum(InIter1 e_begin,
             NegateE,
             NegateF
         >::apply(e_begin, e_end, f_begin, f_end, h_begin, h_end);
-}
-
-template
-<
-    bool zero_elimination,
-    typename InIter1,
-    typename InIter2,
-    typename OutIter,
-    bool inplace
->
-constexpr OutIter fast_expansion_difference(InIter1 e_begin,
-                                            InIter1 e_end,
-                                            InIter2 f_begin,
-                                            InIter2 f_end,
-                                            OutIter h_begin,
-                                            OutIter h_end)
-{
-    return fast_expansion_sum
-        <
-            zero_elimination,
-            InIter1,
-            InIter2,
-            OutIter,
-            inplace,
-            false,
-            true
-        >(e_begin, e_end, f_begin, f_end, h_begin, h_end);
 }
 
 template
@@ -968,6 +973,7 @@ template
             e_length,
             f_length
         >::value,
+    bool MostSigOnly = false,
     int h_length = expansion_sum_length(e_length, f_length)
 >
 struct expansion_plus_impl
@@ -984,6 +990,7 @@ struct expansion_plus_impl
         return fast_expansion_sum
             <
                 zero_elimination<h_length>::value,
+                MostSigOnly,
                 InIter1,
                 InIter2,
                 OutIter,
@@ -994,8 +1001,8 @@ struct expansion_plus_impl
     }
 };
 
-template <bool inplace, bool e_negate, bool f_negate, template<int> class ze, int h_length>
-struct expansion_plus_impl<1, 1, inplace, e_negate, f_negate, ze, false, h_length>
+template <bool inplace, bool e_negate, bool f_negate, template<int> class ze, bool MostSigOnly, int h_length>
+struct expansion_plus_impl<1, 1, inplace, e_negate, f_negate, ze, false, MostSigOnly, h_length>
 {
     template<typename InIter1, typename InIter2, typename OutIter>
     static constexpr OutIter apply(InIter1 e_begin,
@@ -1022,9 +1029,10 @@ template
     bool e_negate,
     bool f_negate,
     template<int> class ze,
+    bool MostSigOnly,
     int h_length
 >
-struct expansion_plus_impl<e_length, 1, inplace, e_negate, f_negate, ze, false, h_length>
+struct expansion_plus_impl<e_length, 1, inplace, e_negate, f_negate, ze, false, MostSigOnly, h_length>
 {
     template<typename InIter1, typename InIter2, typename OutIter>
     static constexpr OutIter apply(InIter1 e_begin,
@@ -1037,6 +1045,7 @@ struct expansion_plus_impl<e_length, 1, inplace, e_negate, f_negate, ze, false, 
         return grow_expansion
             <
                 ze<h_length>::value,
+                MostSigOnly,
                 InIter1,
                 OutIter,
                 typename std::iterator_traits<InIter2>::value_type,
@@ -1054,6 +1063,7 @@ template
     bool f_negate,
     template<int> class ze,
     bool fe,
+    bool MostSigOnly,
     int h_length
 >
 struct expansion_plus_impl
@@ -1065,6 +1075,7 @@ struct expansion_plus_impl
         f_negate,
         ze,
         fe,
+        MostSigOnly,
         h_length
     >
 {
@@ -1079,6 +1090,7 @@ struct expansion_plus_impl
         return grow_expansion
             <
                 ze<h_length>::value,
+                MostSigOnly,
                 InIter2,
                 OutIter,
                 typename std::iterator_traits<InIter1>::value_type,
@@ -1096,9 +1108,10 @@ template
     bool e_negate,
     bool f_negate,
     template<int> class ze,
+    bool MostSigOnly,
     int h_length
 >
-struct expansion_plus_impl<f_length, e_length, inplace, e_negate, f_negate, ze, false, h_length>
+struct expansion_plus_impl<f_length, e_length, inplace, e_negate, f_negate, ze, false, MostSigOnly, h_length>
 {
     template<typename InIter1, typename InIter2, typename OutIter>
     static constexpr OutIter apply(InIter1 e_begin,
@@ -1111,6 +1124,7 @@ struct expansion_plus_impl<f_length, e_length, inplace, e_negate, f_negate, ze, 
         return expansion_sum
             <
                 ze<h_length>::value,
+                MostSigOnly,
                 InIter1,
                 InIter2,
                 OutIter,
@@ -1127,6 +1141,7 @@ template
     bool inplace,
     template<int> class ze = default_zero_elimination_policy,
     template<int, int> class fe = default_fast_expansion_sum_policy,
+    bool MostSigOnly = false,
     typename InIter1,
     typename InIter2,
     typename OutIter,
@@ -1147,7 +1162,8 @@ constexpr OutIter expansion_plus(InIter1 e_begin,
             false,
             false,
             ze,
-            fe<e_length, f_length>::value
+            fe<e_length, f_length>::value,
+            MostSigOnly
         >::apply(e_begin, e_end, f_begin, f_end, h_begin, h_end);
 }
 
@@ -1158,6 +1174,7 @@ template
     bool inplace,
     template<int> class ze = default_zero_elimination_policy,
     template<int, int> class = default_fast_expansion_sum_policy,
+    bool MostSigOnly = false,
     typename InIter,
     typename Real,
     typename OutIter,
@@ -1170,7 +1187,7 @@ constexpr OutIter expansion_plus(InIter e_begin,
                                  OutIter h_end)
 {
     static_assert( f_length == 1, "f_length must be 1 if f is a single component." );
-    return grow_expansion<ze<result>::value>(e_begin, e_end, f, h_begin, h_end);
+    return grow_expansion<ze<result>::value, MostSigOnly>(e_begin, e_end, f, h_begin, h_end);
 }
 
 template
@@ -1180,6 +1197,7 @@ template
     bool inplace,
     template<int> class ze = default_zero_elimination_policy,
     template<int, int> class = default_fast_expansion_sum_policy,
+    bool MostSigOnly = false,
     typename InIter,
     typename Real,
     typename OutIter,
@@ -1192,7 +1210,7 @@ constexpr OutIter expansion_plus(Real e,
                                  OutIter h_end)
 {
     static_assert( e_length == 1, "e_length must be 1 if e is a single component." );
-    return grow_expansion<ze<result>::value>(f_begin, f_end, e, h_begin, h_end);
+    return grow_expansion<ze<result>::value, MostSigOnly>(f_begin, f_end, e, h_begin, h_end);
 }
 
 template
@@ -1202,6 +1220,7 @@ template
     bool inplace,
     template<int> class ze = default_zero_elimination_policy,
     template<int, int> class = default_fast_expansion_sum_policy,
+    bool MostSigOnly = false,
     typename Real,
     typename OutIter,
     int result = expansion_sum_length(e_length, f_length)
@@ -1214,6 +1233,11 @@ constexpr OutIter expansion_plus(
 {
     static_assert( f_length == 1 && e_length == 1, "e_length and f_length must be 1 if they are single components." );
     Real x = e + f;
+    if(MostSigOnly)
+    {
+        *h_begin = x;
+        return h_begin + 1;
+    }
     Real y = two_sum_tail(e, f, *(h_begin + 1));
     OutIter h_it = h_begin;
     h_it = insert_ze<ze<result>::value>(h_it, y);
@@ -1229,6 +1253,7 @@ template
     bool StageB,
     template<int> class ze = default_zero_elimination_policy,
     template<int, int> class fe = default_fast_expansion_sum_policy,
+    bool MostSigOnly = false,
     typename InIter1,
     typename InIter2,
     typename OutIter,
@@ -1249,7 +1274,8 @@ constexpr OutIter expansion_minus(InIter1 e_begin,
             false,
             true,
             ze,
-            fe<e_length, f_length>::value
+            fe<e_length, f_length>::value,
+            MostSigOnly
         >::apply(e_begin, e_end, f_begin, f_end, h_begin, h_end);
 }
 
@@ -1259,8 +1285,9 @@ template
     int f_length,
     bool inplace,
     bool StageB,
-    template<int> class ze = default_zero_elimination_policy,
-    template<int, int> class = default_fast_expansion_sum_policy,
+    template<int> class ZE = default_zero_elimination_policy,
+    template<int, int> class FE = default_fast_expansion_sum_policy,
+    bool MostSigOnly = false,
     typename InIter,
     typename Real,
     typename OutIter,
@@ -1280,7 +1307,9 @@ constexpr OutIter expansion_minus(InIter e_begin,
             inplace,
             false,
             true,
-            ze
+            ZE,
+            FE,
+            MostSigOnly
         >(e_begin, e_end, f, h_begin, h_end);
 }
 
@@ -1292,6 +1321,7 @@ template
     bool StageB,
     template<int> class ze = default_zero_elimination_policy,
     template<int, int> class = default_fast_expansion_sum_policy,
+    bool MostSigOnly = false,
     typename Real,
     typename InIter,
     typename OutIter,
@@ -1307,6 +1337,7 @@ constexpr OutIter expansion_minus(Real e,
     return grow_expansion
         <
             ze<result>::value,
+            MostSigOnly,
             InIter,
             OutIter,
             Real,
@@ -1323,6 +1354,7 @@ template
     bool StageB,
     template<int> class ze = default_zero_elimination_policy,
     template<int, int> class = default_fast_expansion_sum_policy,
+    bool MostSigOnly = false,
     typename Real,
     typename OutIter,
     int result = expansion_sum_length(e_length, f_length)
@@ -1334,6 +1366,11 @@ constexpr std::enable_if_t<!StageB, OutIter> expansion_minus(Real e,
 {
     static_assert(e_length == 1 && f_length == 1, "e_length and f_length must be 1 if they are single components.");
     Real x = e - f;
+    if (MostSigOnly)
+    {
+        *h_begin = x;
+        return h_begin + 1;
+    }
     Real y = two_difference_tail(e, f, x);
     OutIter h_it = h_begin;
     h_it = insert_ze<ze<result>::value>(h_it, y);
@@ -1349,6 +1386,7 @@ template
     bool StageB,
     template<int> class = default_zero_elimination_policy,
     template<int, int> class = default_fast_expansion_sum_policy,
+    bool MostSigOnly = false,
     typename Real,
     typename OutIter,
     int result = expansion_sum_length(e_length, f_length)

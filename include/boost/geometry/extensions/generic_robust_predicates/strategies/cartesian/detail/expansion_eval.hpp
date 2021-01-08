@@ -94,6 +94,27 @@ template <typename Expression> using expansion_size =
 template <typename Expression> using expansion_size_stage_b =
     boost::mp11::mp_size_t< expansion_size_impl<Expression, true>::value >;
 
+template
+<
+    typename Expression,
+    std::size_t LeftLength,
+    std::size_t RightLength,
+    template <int, int> class FEPolicy,
+    operator_types Op = Expression::operator_type
+>
+constexpr std::size_t final_expansion_size()
+{
+    if(Op == operator_types::product)
+    {
+        return 2 * LeftLength * RightLength;
+    }
+    if(LeftLength == 1 || RightLength == 1 || FEPolicy<LeftLength, RightLength>::value)
+    {
+        return 1;
+    }
+    return LeftLength + RightLength;
+};
+
 template <int> using no_zero_elimination_policy = boost::mp11::mp_false;
 
 template
@@ -106,7 +127,8 @@ template
     template <int> class ZEPolicy,
     template <int, int> class FEPolicy,
     bool StageB = false,
-    bool LeftEqualsRight = false
+    bool LeftEqualsRight = false,
+    bool MostSigOnly = false
 >
 struct perform_op_impl {};
 
@@ -119,7 +141,8 @@ template
     template <int> class ZEPolicy,
     template <int, int> class FEPolicy,
     bool StageB,
-    bool LeftEqualsRight
+    bool LeftEqualsRight,
+    bool MostSigOnly
 >
 struct perform_op_impl
     <
@@ -131,7 +154,8 @@ struct perform_op_impl
         ZEPolicy,
         FEPolicy,
         StageB,
-        LeftEqualsRight
+        LeftEqualsRight,
+        MostSigOnly
     >
 {
     template<typename ...Args>
@@ -142,7 +166,9 @@ struct perform_op_impl
                 LeftLength,
                 RightLength,
                 Inplace,
-                ZEPolicy
+                ZEPolicy,
+                FEPolicy,
+                MostSigOnly
             >(args...);
     }
 };
@@ -156,7 +182,8 @@ template
     template <int> class ZEPolicy,
     template <int, int> class FEPolicy,
     bool StageB,
-    bool LeftEqualsRight
+    bool LeftEqualsRight,
+    bool MostSigOnly
 >
 struct perform_op_impl
     <
@@ -168,7 +195,8 @@ struct perform_op_impl
         ZEPolicy,
         FEPolicy,
         StageB,
-        LeftEqualsRight
+        LeftEqualsRight,
+        MostSigOnly
     >
 {
     template<typename ...Args>
@@ -181,7 +209,8 @@ struct perform_op_impl
                 Inplace,
                 StageB,
                 ZEPolicy,
-                FEPolicy
+                FEPolicy,
+                MostSigOnly
             >(args...);
     }
 };
@@ -195,7 +224,8 @@ template
     template <int> class ZEPolicy,
     template <int, int> class FEPolicy,
     bool StageB,
-    bool LeftEqualsRight
+    bool LeftEqualsRight,
+    bool MostSigOnly
 >
 struct perform_op_impl
     <
@@ -207,7 +237,8 @@ struct perform_op_impl
         ZEPolicy,
         FEPolicy,
         StageB,
-        LeftEqualsRight
+        LeftEqualsRight,
+        MostSigOnly
     >
 {
     template<typename ...Args>
@@ -240,7 +271,8 @@ template
     operator_types Op = Eval::operator_type,
     bool LeftLeaf = Eval::left::is_leaf,
     bool RightLeaf = Eval::right::is_leaf,
-    bool LeftEqualsRight = false
+    bool LeftEqualsRight = false,
+    bool MostSigOnly = false
 >
 struct eval_expansion_impl {};
 
@@ -274,7 +306,8 @@ template
     template <int, int> class FEPolicy,
     bool StageB,
     operator_types Op,
-    bool LeftEqualsRight
+    bool LeftEqualsRight,
+    bool MostSigOnly
 >
 struct eval_expansion_impl
     <
@@ -291,7 +324,8 @@ struct eval_expansion_impl
         Op,
         true,
         true,
-        LeftEqualsRight
+        LeftEqualsRight,
+        MostSigOnly
     >
 {
 private:
@@ -310,7 +344,7 @@ public:
             {{ static_cast<Real>(args)... }};
         Real left_val = input[left::argn - 1];
         Real right_val = input[right::argn - 1];
-        auto end = perform_op_impl<Op, 1, 1, false, Iter, ZEPolicy, FEPolicy, StageB, LeftEqualsRight>
+        auto end = perform_op_impl<Op, 1, 1, false, Iter, ZEPolicy, FEPolicy, StageB, LeftEqualsRight, MostSigOnly>
             ::apply(left_val, right_val, begin + start, begin + start + size);
         set_exp_end
             <
@@ -354,7 +388,8 @@ template
     template <int, int> class FEPolicy,
     bool StageB,
     operator_types Op,
-    bool LeftEqualsRight
+    bool LeftEqualsRight,
+    bool MostSigOnly
 >
 struct eval_expansion_impl
     <
@@ -371,7 +406,8 @@ struct eval_expansion_impl
         Op,
         true,
         false,
-        LeftEqualsRight
+        LeftEqualsRight,
+        MostSigOnly
     >
 {
 private:
@@ -440,7 +476,8 @@ template
     template <int, int> class FEPolicy,
     bool StageB,
     operator_types Op,
-    bool LeftEqualsRight
+    bool LeftEqualsRight,
+    bool MostSigOnly
 >
 struct eval_expansion_impl
     <
@@ -457,7 +494,8 @@ struct eval_expansion_impl
         Op,
         false,
         true,
-        LeftEqualsRight
+        LeftEqualsRight,
+        MostSigOnly
     >
 {
 private:
@@ -526,7 +564,8 @@ template
     template <int, int> class FEPolicy,
     bool StageB,
     operator_types Op,
-    bool LeftEqualsRight
+    bool LeftEqualsRight,
+    bool MostSigOnly
 >
 struct eval_expansion_impl
     <
@@ -543,7 +582,8 @@ struct eval_expansion_impl
         Op,
         false,
         false,
-        LeftEqualsRight
+        LeftEqualsRight,
+        MostSigOnly
     >
 {
 private:
@@ -593,7 +633,8 @@ public:
                 ZEPolicy,
                 FEPolicy,
                 StageB,
-                LeftEqualsRight
+                LeftEqualsRight,
+                MostSigOnly
             >::apply(
                 begin + left_start,
                 left_end,
@@ -646,7 +687,8 @@ struct eval_expansions_impl
                 eval::operator_type,
                 eval::left::is_leaf,
                 eval::right::is_leaf,
-                std::is_same<typename eval::left, typename eval::right>::value
+                std::is_same<typename eval::left, typename eval::right>::value,
+                false
             >::apply(begin, end, ze_ends, args...);
         return eval_expansions_impl
             <
@@ -715,7 +757,8 @@ struct eval_expansions_impl
                 eval::operator_type,
                 eval::left::is_leaf,
                 eval::right::is_leaf,
-                std::is_same<typename eval::left, typename eval::right>::value
+                std::is_same<typename eval::left, typename eval::right>::value,
+                true
             >::apply(begin, end, ze_ends, args...);
         return new_end;
     }
