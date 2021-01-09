@@ -486,9 +486,9 @@ constexpr OutIter grow_expansion(InIter e_begin,
         Real Q_new = negate<NegateE>(*e_it) + Q;
         Real h_new = two_sum_tail(negate<NegateE>(*e_it), Q, Q_new);
         Q = Q_new;
-        h_it = insert_ze<ZeroElimination>(h_it, h_new);
+        h_it = insert_ze<ZeroElimination, MostSigOnly>(h_it, h_new);
     }
-    h_it = insert_ze_final<ZeroElimination>(h_it, h_begin, Q);
+    h_it = insert_ze_final<ZeroElimination, MostSigOnly>(h_it, h_begin, Q);
     assert(debug_expansion::expansion_nonoverlapping(h_begin, h_it));
     assert(  !debug_expansion::expansion_nonadjacent(e_begin, e_end)
            || debug_expansion::expansion_nonadjacent(h_begin, h_it) );
