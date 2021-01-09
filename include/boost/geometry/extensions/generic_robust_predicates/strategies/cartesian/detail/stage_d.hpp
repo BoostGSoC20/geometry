@@ -61,8 +61,7 @@ struct stage_d
                             <
                                 Expression,
                                 expansion_size<typename Expression::left>::value,
-                                expansion_size<typename Expression::right>::value,
-                                FEPolicy
+                                expansion_size<typename Expression::right>::value
                             >()
                     >
             >;

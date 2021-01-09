@@ -99,7 +99,6 @@ template
     typename Expression,
     std::size_t LeftLength,
     std::size_t RightLength,
-    template <int, int> class FEPolicy,
     operator_types Op = Expression::operator_type
 >
 constexpr std::size_t final_expansion_size()
@@ -108,11 +107,7 @@ constexpr std::size_t final_expansion_size()
     {
         return 2 * LeftLength * RightLength;
     }
-    if(LeftLength == 1 || RightLength == 1 || FEPolicy<LeftLength, RightLength>::value)
-    {
-        return 1;
-    }
-    return LeftLength + RightLength;
+    return 1;
 };
 
 template <int> using no_zero_elimination_policy = boost::mp11::mp_false;
@@ -751,7 +746,7 @@ struct eval_expansions_impl
                 ZEEvals,
                 Iter,
                 Real,
-                force_zero_elimination_policy,
+                ZEPolicy,
                 FEPolicy,
                 StageB,
                 eval::operator_type,
@@ -794,7 +789,7 @@ static constexpr Iter eval_expansions(Iter begin, Iter end, const Reals&... args
 {
     using ze_evals = boost::mp11::mp_copy_if_q
         <
-            boost::mp11::mp_pop_back<Evals>,
+            Evals,
             is_zero_elim_q<ZEPolicy, StageB>
         >;
     std::array<Iter, boost::mp11::mp_size<ze_evals>::value> ze_ends;

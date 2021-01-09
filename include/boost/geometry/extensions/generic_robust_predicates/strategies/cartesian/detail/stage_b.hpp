@@ -149,8 +149,7 @@ struct stage_b
                             <
                                 Expression,
                                 expansion_size_stage_b<typename Expression::left>::value,
-                                expansion_size_stage_b<typename Expression::right>::value,
-                                FEPolicy
+                                expansion_size_stage_b<typename Expression::right>::value
                             >()
                     >
             >;
@@ -191,7 +190,7 @@ struct stage_b
 
         using ze_evals = boost::mp11::mp_copy_if_q
         <
-            boost::mp11::mp_pop_back<remainder>,
+            remainder,
             is_zero_elim_q<ZEPolicy, true>
         >;
         std::array<typename result_array::iterator, boost::mp11::mp_size<ze_evals>::value> ze_ends;
