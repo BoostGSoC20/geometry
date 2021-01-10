@@ -618,7 +618,7 @@ constexpr OutIter expansion_sum_most_sig(InIter1 e_begin,
     for(auto f_it = f_begin; f_it != f_end - 1; ++f_it)
     {
         const auto e = *e_begin;
-        const auto f = negate<NegateE != NegateF>(*f_begin);
+        const auto f = negate<NegateE != NegateF>(*f_it);
         const auto Q = e + f;
         const auto h = two_sum_tail(e, f, Q);
         insert_ze<ZeroElimination, true>(h_begin, h);
