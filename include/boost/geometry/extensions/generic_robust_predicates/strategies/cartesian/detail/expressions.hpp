@@ -302,6 +302,59 @@ using orient3d = orient<3>;
 using incircle = innsphere<2>;
 using insphere = innsphere<3>;
 
+struct incircle_simplified_impl
+{
+private:
+    using qpx = difference<argument<3>, argument<7>>;
+    using qpy = difference<argument<4>, argument<8>>;
+    using rpx = difference<argument<1>, argument<7>>;
+    using rpy = difference<argument<2>, argument<8>>;
+    using tpx = difference<argument<5>, argument<7>>;
+    using tpy = difference<argument<6>, argument<8>>;
+public:
+    using type = det
+        <
+            difference
+                <
+                    product<qpx, tpy>,
+                    product<qpy, tpx>
+                >,
+            sum
+                <
+                    product
+                        <
+                            tpx,
+                            difference < argument<5>, argument<3> >
+                        >,
+                    product
+                        <
+                            tpy,
+                            difference < argument<6>, argument<4> >
+                        >
+                >,
+            difference
+                <
+                    product<qpx, rpy>,
+                    product<qpy, rpx>
+                >,
+            sum
+                <
+                    product
+                        <
+                            rpx,
+                            difference < argument<1>, argument<3> >
+                        >,
+                    product
+                        <
+                            rpy,
+                            difference < argument<2>, argument<4> >
+                        >
+                >
+        >;
+};
+
+using incircle_simplified = incircle_simplified_impl::type;
+
 struct orient2d_no_translation_impl
 {
 private:
@@ -325,6 +378,39 @@ public:
 };
 
 using orient2d_no_translation = orient2d_no_translation_impl::type;
+
+struct orient3d_no_translation_impl
+{
+private:
+    using adet = det
+        <
+            argument<4>, argument<5>, argument<6>,
+            argument<7>, argument<8>, argument<9>,
+            argument<10>,argument<11>,argument<12>
+        >;
+    using bdet = det
+        <
+            argument<1>, argument<2>, argument<3>,
+            argument<7>, argument<8>, argument<9>,
+            argument<10>,argument<11>,argument<12>
+        >;
+    using cdet = det
+        <
+            argument<1>, argument<2>, argument<3>,
+            argument<4>, argument<5>, argument<6>,
+            argument<10>,argument<11>,argument<12>
+        >;
+    using ddet = det
+        <
+            argument<1>, argument<2>, argument<3>,
+            argument<4>, argument<5>, argument<6>,
+            argument<7>, argument<8>, argument<9>
+        >;
+public:
+    using type = sum< difference<adet, bdet>, difference<cdet, ddet> >;
+};
+
+using orient3d_no_translation = orient3d_no_translation_impl::type;
 
 struct incircle_no_translation_impl
 {
@@ -354,6 +440,50 @@ public:
 };
 
 using incircle_no_translation = incircle_no_translation_impl::type;
+
+struct insphere_no_translation_impl
+{
+private:
+    using alift = sum< product<argument<1>, argument<1>>,
+                       product<argument<2>, argument<2>>,
+                       product<argument<3>, argument<3>> >;
+    using blift = sum< product<argument<4>, argument<4>>,
+                       product<argument<5>, argument<5>>,
+                       product<argument<6>, argument<6>> >;
+    using clift = sum< product<argument<7>, argument<7>>,
+                       product<argument<8>, argument<8>>,
+                       product<argument<9>, argument<9>> >;
+    using dlift = sum< product<argument<10>, argument<10>>,
+                       product<argument<11>, argument<11>>,
+                       product<argument<12>, argument<12>> >;
+    using elift = sum< product<argument<13>, argument<13>>,
+                       product<argument<14>, argument<14>>,
+                       product<argument<15>, argument<15>> >;
+    using adet = det < argument<4>,  argument<5>,  argument<6>,  blift,
+                       argument<7>,  argument<8>,  argument<9>,  clift,
+                       argument<10>, argument<11>, argument<12>, dlift,
+                       argument<13>, argument<14>, argument<15>, elift>;
+    using bdet = det < argument<1>,  argument<2>,  argument<3>,  alift,
+                       argument<7>,  argument<8>,  argument<9>,  clift,
+                       argument<10>, argument<11>, argument<12>, dlift,
+                       argument<13>, argument<14>, argument<15>, elift>;
+    using cdet = det < argument<1>,  argument<2>,  argument<3>,  alift,
+                       argument<4>,  argument<5>,  argument<6>,  blift,
+                       argument<10>, argument<11>, argument<12>, dlift,
+                       argument<13>, argument<14>, argument<15>, elift>;
+    using ddet = det < argument<1>,  argument<2>,  argument<3>,  alift,
+                       argument<4>,  argument<5>,  argument<6>,  blift,
+                       argument<7>,  argument<8>,  argument<9>,  clift,
+                       argument<13>, argument<14>, argument<15>, elift>;
+    using edet = det < argument<1>,  argument<2>,  argument<3>,  alift,
+                       argument<4>,  argument<5>,  argument<6>,  blift,
+                       argument<7>,  argument<8>,  argument<9>,  clift,
+                       argument<10>, argument<11>, argument<12>, dlift>;
+public:
+    using type = sum < difference<bdet, adet>, sum< difference<ddet, cdet>, edet> >;
+};
+
+using insphere_no_translation = insphere_no_translation_impl::type;
 
 }} // namespace detail::generic_robust_predicates
 
