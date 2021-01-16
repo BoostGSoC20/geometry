@@ -444,20 +444,20 @@ using incircle_no_translation = incircle_no_translation_impl::type;
 struct insphere_no_translation_impl
 {
 private:
-    using alift = sum< product<argument<1>, argument<1>>,
-                       product<argument<2>, argument<2>>,
+    using alift = sum< sum<product<argument<1>, argument<1>>,
+                           product<argument<2>, argument<2>>>,
                        product<argument<3>, argument<3>> >;
-    using blift = sum< product<argument<4>, argument<4>>,
-                       product<argument<5>, argument<5>>,
+    using blift = sum< sum<product<argument<4>, argument<4>>,
+                           product<argument<5>, argument<5>>>,
                        product<argument<6>, argument<6>> >;
-    using clift = sum< product<argument<7>, argument<7>>,
-                       product<argument<8>, argument<8>>,
+    using clift = sum< sum<product<argument<7>, argument<7>>,
+                           product<argument<8>, argument<8>>>,
                        product<argument<9>, argument<9>> >;
-    using dlift = sum< product<argument<10>, argument<10>>,
-                       product<argument<11>, argument<11>>,
+    using dlift = sum< sum<product<argument<10>, argument<10>>,
+                           product<argument<11>, argument<11>>>,
                        product<argument<12>, argument<12>> >;
-    using elift = sum< product<argument<13>, argument<13>>,
-                       product<argument<14>, argument<14>>,
+    using elift = sum< sum<product<argument<13>, argument<13>>,
+                           product<argument<14>, argument<14>>>,
                        product<argument<15>, argument<15>> >;
     using adet = det < argument<4>,  argument<5>,  argument<6>,  blift,
                        argument<7>,  argument<8>,  argument<9>,  clift,
