@@ -407,7 +407,7 @@ private:
             argument<7>, argument<8>, argument<9>
         >;
 public:
-    using type = sum< difference<adet, bdet>, difference<cdet, ddet> >;
+    using type = sum< difference<bdet, adet>, difference<ddet, cdet> >;
 };
 
 using orient3d_no_translation = orient3d_no_translation_impl::type;
