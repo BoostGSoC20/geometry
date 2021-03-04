@@ -30,10 +30,6 @@ namespace boost { namespace geometry
 namespace detail { namespace generic_robust_predicates
 {
 
-//TODO: Reevaluate the thresholds for various summation algorithms
-//TODO: Reevaluate the zero-elimination threshold
-//TODO: Evaluate the use of AVX2-Gather instructions for post-summation zero-elimination
-
 struct abs_comp
 {
     template <typename Real>
