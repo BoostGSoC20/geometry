@@ -1622,6 +1622,16 @@ template
 >
 constexpr Out expansion_times(In1, In1, In2, In2, Out, Out);
 
+#if defined(BOOST_CLANG)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunused-variable"
+#endif
+
+#if defined(BOOST_GCC) && (BOOST_GCC >= 40900)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-variable"
+#endif
+
 template
 <
     int e_length,
@@ -1722,26 +1732,13 @@ struct expansion_times_impl
     }
 };
 
-/*
-template
-<
-    int e_length,
-    int f_length,
-    bool inplace,
-    template<int> class ze = default_zero_elimination_policy,
-    template<int, int> class = default_fast_expansion_sum_policy,
-    typename InIter,
-    typename Real,
-    typename OutIter,
-    int result = expansion_sum_length(e_length, f_length)
->
-constexpr OutIter expansion_plus(InIter e_begin,
-                                 InIter e_end,
-                                 Real f,
-                                 OutIter h_begin,
-                                 OutIter h_end)
+#if defined(BOOST_CLANG)
+#pragma clang diagnostic pop
+#endif
 
- * */
+#if defined(BOOST_GCC) && (BOOST_GCC >= 40900)
+#pragma GCC diagnostic pop
+#endif
 
 template
 <
