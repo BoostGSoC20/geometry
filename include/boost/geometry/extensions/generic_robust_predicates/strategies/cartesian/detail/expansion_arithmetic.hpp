@@ -221,7 +221,7 @@ constexpr Real two_sum_tail(Real a, Real b, Real x)
 template <typename Real>
 constexpr Real fast_two_sum_tail(Real a, Real b, Real x)
 {
-    assert(std::abs(a) >= std::abs(b) || a == 0);
+    assert(std::abs(a) >= std::abs(b) || a == 0 || b == 0);
     Real b_virtual = x - a;
     Real y = b - b_virtual;
     return y;
@@ -674,6 +674,11 @@ constexpr OutIter fast_expansion_sum_inplace(InIter1 e_begin,
                                              OutIter h_begin,
                                              OutIter h_end)
 {
+#ifndef NDEBUG
+    auto e_approx = std::accumulate(e_begin, e_end, 0.);
+    auto f_approx = std::accumulate(f_begin, f_end, 0.);
+#endif
+
     assert(e_end <= f_begin);
     assert(f_begin != h_begin);
     using Real = typename std::iterator_traits<InIter1>::value_type;
@@ -717,6 +722,17 @@ constexpr OutIter fast_expansion_sum_inplace(InIter1 e_begin,
 
     std::inplace_merge(e_begin, e_end, f_end, abs_comp{});
 
+    if(std::distance(e_begin, f_end) == 1)
+    {
+        *h_begin = *e_begin;
+        if( !ZeroElimination )
+        {
+            std::fill(h_begin + 1, h_end, 0.);
+            return h_end;
+        }
+        return h_begin + 1;
+    }
+
     InIter1 g_it = e_begin;
     InIter2 g_end = f_end;
     OutIter h_it = h_begin;
@@ -738,6 +754,15 @@ constexpr OutIter fast_expansion_sum_inplace(InIter1 e_begin,
     {
         h_it = h_end;
     }
+
+#ifndef NDEBUG
+    auto h_approx = std::accumulate(h_begin, h_it, 0.);
+    assert(
+           MostSigOnly
+        ||    std::abs( (NegateE ? -1 : 1) * e_approx + (NegateF ? -1 : 1) * f_approx - h_approx )
+           <= 1e-5 * ( std::abs(e_approx) + std::abs(f_approx))
+        );
+#endif
     return h_it;
 }
 
@@ -1625,7 +1650,6 @@ struct expansion_times_impl
     {
         assert(debug_expansion::expansion_nonoverlapping(e_begin, e_end));
         assert(debug_expansion::expansion_nonoverlapping(f_begin, f_end));
-        //TODO: Evaluate zero-elimination for very short expansions before multiplication.
         const auto e_dyn_length = std::distance(e_begin, e_end);
         const auto h_old_end = h_end;
         if(e_dyn_length == 1)
@@ -1640,6 +1664,11 @@ struct expansion_times_impl
                     LeftEqualsRight
                 >(*e_begin, f_begin, f_end, h_begin, h_end);
             assert(debug_expansion::expansion_nonoverlapping(h_begin, h_it));
+            assert(std::abs(
+                        std::accumulate(e_begin, e_end, 0.)
+                      * std::accumulate(f_begin, f_end, 0.)
+                      - std::accumulate(h_begin, h_it, 0.)) <=
+                    std::abs(std::accumulate(h_begin, h_it, 0.) * 1e-10));
             return h_it;
         }
         else if (e_dyn_length > 1 )
@@ -1679,7 +1708,13 @@ struct expansion_times_impl
                     ZeroEliminationPolicy,
                     FastExpansionSumPolicy
                 >(h_begin, h_mid, h_mid, h_end, h_begin, h_end);
+
             assert(debug_expansion::expansion_nonoverlapping(h_begin, h_it));
+            assert(std::abs(
+                        std::accumulate(e_begin, e_end, 0.)
+                      * std::accumulate(f_begin, f_end, 0.)
+                      - std::accumulate(h_begin, h_it, 0.)) <=
+                    std::abs(std::accumulate(h_begin, h_it, 0.) * 1e-10));
             return h_it;
         }
         else if (e_dyn_length == 0)
@@ -1930,13 +1965,14 @@ template
 >
 constexpr Iter compress(Iter e_begin, Iter e_end)
 {
+    if(std::distance(e_begin, e_end) < 2) return e_end;
     Iter bottom_it = std::prev(e_end);
     auto Q = *bottom_it;
     Iter e_it;
-    for (e_it = std::prev(bottom_it); e_it != e_begin; --e_it)
+    for (e_it = std::prev(bottom_it);; --e_it)
     {
         auto Q_next = Q + *e_it;
-        auto q = fast_two_sum_tail(Q, *e_it, Q_next);
+        auto q = two_sum_tail(Q, *e_it, Q_next);
         Q = Q_next;
         if (q != 0)
         {
@@ -1944,15 +1980,7 @@ constexpr Iter compress(Iter e_begin, Iter e_end)
             --bottom_it;
             Q = q;
         }
-    }
-    auto Q_next = Q + *e_it;
-    auto q = fast_two_sum_tail(Q, *e_it, Q_next);
-    Q = Q_next;
-    if (q != 0)
-    {
-        *bottom_it = Q;
-        --bottom_it;
-        Q = q;
+        if(e_it == e_begin) break;
     }
     *bottom_it = Q;
     Iter top_it = e_begin;
