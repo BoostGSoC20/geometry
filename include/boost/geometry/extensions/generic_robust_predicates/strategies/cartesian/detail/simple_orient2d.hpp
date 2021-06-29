@@ -9,6 +9,7 @@
 #ifndef BOOST_GEOMETRY_EXTENSIONS_GENERIC_ROBUST_PREDICATES_STRATEGIES_CARTESIAN_DETAIL_SIMPLE_ORIENT2D_HPP
 #define BOOST_GEOMETRY_EXTENSIONS_GENERIC_ROBUST_PREDICATES_STRATEGIES_CARTESIAN_DETAIL_SIMPLE_ORIENT2D_HPP
 
+#include <cstdint>
 #include <limits>
 #include <cmath>
 
@@ -28,26 +29,26 @@ struct phi_impl
 
 template <> struct phi_impl<53>
 {
-    static constexpr long value = 94906264;
+    static constexpr int_least64_t value = 94'906'264;
 };
 
 template <> struct phi_impl<24>
 {
-    static constexpr long value = 4094;
+    static constexpr int_least32_t value = 4'094;
 };
 
 template <> struct phi_impl<64>
 {
-    static constexpr long value = 4294967294;
+    static constexpr int_least64_t value = 4'294'967'294;
 };
 
 template <> struct phi_impl<11>
 {
-    static constexpr long value = 44;
+    static constexpr int_least16_t value = 44;
 };
 
 template <typename CalculationType>
-static constexpr long phi =
+static constexpr auto phi =
     phi_impl<std::numeric_limits<CalculationType>::digits>::value;
 
 template <typename CalculationType>

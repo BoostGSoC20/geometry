@@ -132,9 +132,17 @@ private:
     using leb  = stage_a_error_bound<typename Expression::left>;
     using reb = stage_a_error_bound<typename Expression::right>;
     static constexpr std::array<int, 3> a_prod = coeff_product(leb::a, reb::a);
+    static constexpr std::array<int, 3> la = leb::a;
+    static constexpr std::array<int, 3> ra = reb::a;
+    static constexpr std::array<int, 3> prod {
+            0, la[0] * ra[0], la[0] * ra[1] + la[1] * ra[0] + 1
+        };
+    static constexpr std::array<int, 3> sum = {
+            la[0] + ra[0], la[1] + ra[1] + prod[1], la[2] + ra[2] + prod[2]
+        };
 public:
     using magnitude = product<typename leb::magnitude, typename reb::magnitude>;
-    static constexpr std::array<int, 3> a = coeff_inc_first(coeff_mult_by_1_plus_eps(a_prod));
+    static constexpr std::array<int, 3> a = coeff_inc_first(coeff_mult_by_1_plus_eps(sum));
 };
 
 template
@@ -152,7 +160,7 @@ struct stage_a_condition
         stage_a_error_propagation_cases::sum_or_diff
     >
 {
-public: //TODO make private:
+private:
     using leb = stage_a_error_bound<typename Expression::left>;
     using reb = stage_a_error_bound<typename Expression::right>;
     static constexpr auto max_a = coeff_max(leb::a, reb::a);
