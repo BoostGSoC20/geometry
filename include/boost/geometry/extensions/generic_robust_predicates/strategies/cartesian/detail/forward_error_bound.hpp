@@ -280,6 +280,18 @@ public:
     using type = product<constant, typename fe_cond::magnitude>;
 };
 
+template
+<
+    typename Expression,
+    typename CalculationType,
+    typename Rules
+>
+using forward_error_bound_expression =
+    typename forward_error_bound_expression_impl<Expression, CalculationType, Rules>::type;
+
+using all_rules = mp11::mp_list<exact_leaves, exact_leaves_sumdiff, exact_leaves_product<false>, inexacts_sumdiff, ozaki_simple_fp_lemma_31<false>, inexacts_product<false>>;
+using all_rules_up = mp11::mp_list<exact_leaves, exact_leaves_sumdiff, exact_leaves_product<true>, inexacts_sumdiff, ozaki_simple_fp_lemma_31<true>, inexacts_product<true>>;
+
 }} // namespace detail::generic_robust_predicates
 
 }} // namespace boost::geometry

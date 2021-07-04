@@ -243,21 +243,45 @@ template <typename Expression>
 constexpr std::size_t max_argn<Expression, operator_arities::nullary> =
     Expression::argn;
 
-using  _1 = argument<1>;
-using  _2 = argument<2>;
-using  _3 = argument<3>;
-using  _4 = argument<4>;
-using  _5 = argument<5>;
-using  _6 = argument<6>;
-using  _7 = argument<7>;
-using  _8 = argument<8>;
-using  _9 = argument<9>;
-using _10 = argument<10>;
-using _11 = argument<11>;
-using _12 = argument<12>;
-using _13 = argument<13>;
-using _14 = argument<14>;
-using _15 = argument<15>;
+constexpr argument<1> _1;
+constexpr argument<2> _2;
+constexpr argument<3> _3;
+constexpr argument<4> _4;
+constexpr argument<5> _5;
+constexpr argument<6> _6;
+constexpr argument<7> _7;
+constexpr argument<8> _8;
+constexpr argument<9> _9;
+constexpr argument<10> _10;
+constexpr argument<11> _11;
+constexpr argument<12> _12;
+constexpr argument<13> _13;
+constexpr argument<14> _14;
+constexpr argument<15> _15;
+
+
+template <typename Expression>
+concept expression_tree = requires {
+    Expression::operator_type;
+};
+
+template <expression_tree Exp1, expression_tree Exp2>
+constexpr sum<Exp1, Exp2> operator+(Exp1, Exp2)
+{
+    return {};
+}
+
+template <expression_tree Exp1, expression_tree Exp2>
+constexpr difference<Exp1, Exp2> operator-(Exp1, Exp2)
+{
+    return {};
+}
+
+template <expression_tree Exp1, expression_tree Exp2>
+constexpr product<Exp1, Exp2> operator*(Exp1, Exp2)
+{
+    return {};
+}
 
 }} // namespace detail::generic_robust_predicates
 

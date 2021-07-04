@@ -20,6 +20,7 @@
 
 #include <boost/geometry/extensions/generic_robust_predicates/strategies/cartesian/detail/expression_tree.hpp>
 #include <boost/geometry/extensions/generic_robust_predicates/strategies/cartesian/detail/expression_eval.hpp>
+#include <boost/geometry/extensions/generic_robust_predicates/strategies/cartesian/detail/zero_pattern.hpp>
 
 namespace boost { namespace geometry
 {
@@ -47,7 +48,8 @@ template
 <
     typename Expression,
     typename CalculationType,
-    typename ErrorExpression
+    typename ErrorExpression,
+    bool ZeroPattern = false
 >
 struct semi_static_filter
 {
@@ -90,25 +92,35 @@ public:
         evaluate_expressions(input, results, all_evals{});
         constexpr std::size_t i_eb =
             boost::mp11::mp_find<all_evals, ErrorExpression>::value;
-        const ct error_bound = results[i_eb];
+        ct error_bound = results[i_eb];
+#define variation1
+#ifndef variation1
+        if constexpr (ZeroPattern)
+        {
+            error_bound *= certify_zero<Expression>(input);
+        }
+#endif
         constexpr std::size_t i_e =
             boost::mp11::mp_find<all_evals, Expression>::value;
         const ct det = results[i_e];
-        if (det > error_bound)
+        if (std::abs(det) >= error_bound) [[likely]]
         {
-            return 1;
+            return (det > 0) - (det < 0) ;
         }
-        else if (det < -error_bound)
+        else [[unlikely]]
         {
-            return -1;
-        }
-        else if (error_bound == 0 && det == 0)
-        {
-            return 0;
-        }
-        else
-        {
-            return sign_uncertain;
+#ifdef variation1
+            if constexpr (ZeroPattern)
+            {
+                return sign_uncertain * certify_zero<Expression>(input);
+            }
+            else
+            {
+#endif
+                return sign_uncertain;
+#ifdef variation1
+            }
+#endif
         }
     }
 };
