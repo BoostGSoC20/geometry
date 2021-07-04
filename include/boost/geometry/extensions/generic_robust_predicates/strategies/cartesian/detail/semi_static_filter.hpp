@@ -93,34 +93,28 @@ public:
         constexpr std::size_t i_eb =
             boost::mp11::mp_find<all_evals, ErrorExpression>::value;
         ct error_bound = results[i_eb];
-#define variation1
-#ifndef variation1
         if constexpr (ZeroPattern)
         {
             error_bound *= certify_zero<Expression>(input);
         }
-#endif
         constexpr std::size_t i_e =
             boost::mp11::mp_find<all_evals, Expression>::value;
         const ct det = results[i_e];
-        if (std::abs(det) >= error_bound) [[likely]]
+        if (det > error_bound)
         {
-            return (det > 0) - (det < 0) ;
+            return 1;
         }
-        else [[unlikely]]
+        else if (det < -error_bound)
         {
-#ifdef variation1
-            if constexpr (ZeroPattern)
-            {
-                return sign_uncertain * certify_zero<Expression>(input);
-            }
-            else
-            {
-#endif
-                return sign_uncertain;
-#ifdef variation1
-            }
-#endif
+            return -1;
+        }
+        else if (error_bound == 0 && det == 0)
+        {
+            return 0;
+        }
+        else
+        {
+            return sign_uncertain;
         }
     }
 };
